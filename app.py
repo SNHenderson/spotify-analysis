@@ -24,7 +24,7 @@ SPOTIFY_API_URL = "{}/{}".format(SPOTIFY_API_BASE_URL, API_VERSION)
 # Server-side Parameters
 CLIENT_SIDE_URL = os.getenv('HEROKU_URL')
 REDIRECT_URI = "{}/callback/q".format(CLIENT_SIDE_URL)
-SCOPE = "playlist-modify-public playlist-modify-private"
+SCOPE = "user-library-read"
 STATE = ""
 SHOW_DIALOG_bool = True
 SHOW_DIALOG_str = str(SHOW_DIALOG_bool).lower()
@@ -70,20 +70,14 @@ def callback():
     # Auth Step 6: Use the access token to access Spotify API
     authorization_header = {"Authorization": "Bearer {}".format(access_token)}
 
-    # Get profile data
-    user_profile_api_endpoint = "{}/me".format(SPOTIFY_API_URL)
-    profile_response = requests.get(user_profile_api_endpoint, headers=authorization_header)
-    profile_data = json.loads(profile_response.text)
-
-    # Get user playlist data
-    playlist_api_endpoint = "{}/playlists".format(profile_data["href"])
-    playlists_response = requests.get(playlist_api_endpoint, headers=authorization_header)
-    playlist_data = json.loads(playlists_response.text)
+    # Get saved songs data
+    songs_api_endpoint = "{}/me/tracks".format(SPOTIFY_API_URL)
+    songs_response = requests.get(songs_api_endpoint, headers=authorization_header)
+    songs_data = json.loads(songs_response.text)
 
     # Combine profile and playlist data to display
-    display_arr = [profile_data] + playlist_data["items"]
+    display_arr = songs_data["items"]
     return render_template("index.html", sorted_array=display_arr)
-
 
 if __name__ == "__main__":
     app.run(debug=True)
