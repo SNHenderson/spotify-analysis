@@ -72,11 +72,19 @@ def callback():
 
     # Get saved songs data
     songs_api_endpoint = "{}/me/tracks".format(SPOTIFY_API_URL)
-    songs_response = requests.get(songs_api_endpoint, headers=authorization_header)
-    songs_data = json.loads(songs_response.text)
+    params = {
+    	"limit" : 50,
+    	"offset" : 0
+    }
+
+    display_arr = []
+    for x in xrange(0,20):
+    	songs_response = requests.get(songs_api_endpoint, headers=authorization_header, params=params)
+		songs_data = json.loads(songs_response.text)
+		params["offset"] += 50;
+		display_arr.extend(songs_data["items"])
 
     # Combine profile and playlist data to display
-    display_arr = songs_data["items"]
     return render_template("index.html", sorted_array=display_arr)
 
 if __name__ == "__main__":
