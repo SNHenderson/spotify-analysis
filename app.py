@@ -100,7 +100,7 @@ def callback():
         params["offset"] += 50;    
 
     # Combine profile and playlist data to display
-    return render_template("index.html", display=df.to_string)
+    return render_template("index.html", display=df.to_string())
 
 if __name__ == "__main__":
     app.run(debug=True)
