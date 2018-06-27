@@ -98,10 +98,10 @@ def callback():
                 songs.append(song_data)
         params["offset"] += 50;  
 
-    df = pd.DataFrame(songs)
+    df = pd.DataFrame(songs).drop(columns=['analysis_url', 'id', 'track_href', 'type', 'uri'])
 
     # Combine profile and playlist data to display
-    return render_template("index.html", display=df.to_string())
+    return render_template("index.html", display=df)
 
 if __name__ == "__main__":
     app.run(debug=True)
