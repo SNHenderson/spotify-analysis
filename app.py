@@ -82,7 +82,7 @@ def callback():
         render_template("index.html", sorted_array=display_arr)
         songs_response = requests.get(songs_api_endpoint, headers=authorization_header, params=params)
         songs_data = json.loads(songs_response.text)
-        if songs_data && "items" in songs_data:
+        if songs_data and "items" in songs_data:
             for song in songs_data["items"]:
                 song_api_endpoint = "{}/audio-features/{}".format(SPOTIFY_API_URL, song["track"]["id"])
                 song_response = requests.get(song_api_endpoint, headers=authorization_header)
