@@ -11,8 +11,8 @@ from urllib.parse import quote
 app = Flask(__name__)
 
 #  Client Keys
-CLIENT_ID = os.getenv('CLIENT_ID')
-CLIENT_SECRET = os.getenv('CLIENT_SECRET')
+#CLIENT_ID = os.getenv('CLIENT_ID')
+#CLIENT_SECRET = os.getenv('CLIENT_SECRET')
 
 # Spotify URLS
 SPOTIFY_AUTH_URL = "https://accounts.spotify.com/authorize"
@@ -22,8 +22,10 @@ API_VERSION = "v1"
 SPOTIFY_API_URL = "{}/{}".format(SPOTIFY_API_BASE_URL, API_VERSION)
 
 # Server-side Parameters
-CLIENT_SIDE_URL = os.getenv('HEROKU_URL')
-REDIRECT_URI = "{}/callback/q".format(CLIENT_SIDE_URL)
+#CLIENT_SIDE_URL = os.getenv('HEROKU_URL')
+CLIENT_SIDE_URL = "http://127.0.0.1"
+PORT = 8080
+REDIRECT_URI = "{}:{}/callback/q".format(CLIENT_SIDE_URL, PORT)
 SCOPE = "user-library-read"
 STATE = ""
 SHOW_DIALOG_bool = True
@@ -82,17 +84,20 @@ def callback():
     max = 1
     for _ in range(0, max):
         songs_response = requests.get(songs_api_endpoint, headers=authorization_header, params=params)
-        songs_data = json.loads(songs_response.text)
+        songs_data = songs_response.json()
         if songs_data and "items" in songs_data:
             for song in songs_data["items"]:
                 song_api_endpoint = "{}/audio-features/{}".format(SPOTIFY_API_URL, song["track"]["id"])
+                #print("Sending request to ", song_api_endpoint)
                 song_response = requests.get(song_api_endpoint, headers=authorization_header)
-                song_data = json.loads(song_response.text)
-                display_arr.extend(song_data)
+                song_data = song_response.json()
+                #print("Received song ", song_data)
+                song_data["name"] = song["track"]["name"]
+                display_arr.append(song_data)
         params["offset"] += 50;    
 
     # Combine profile and playlist data to display
     return render_template("index.html", sorted_array=display_arr)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, port=PORT)

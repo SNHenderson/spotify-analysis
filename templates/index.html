@@ -1,6 +1,42 @@
 <doctype html>
 <html>
-	{% for item in sorted_array%}
-	<p> {{ item }} </p>
-	{% endfor %}
+    <table style="width:100%">
+        <tr>
+            <th>name</th>
+            <th>artist</th>
+            <th>danceability</th>
+            <th>energy</th>
+            <th>key</th> 
+            <th>loudness</th>
+            <th>mode</th> 
+            <th>speechiness</th>
+            <th>acousticness</th>
+            <th>instrumentalness</th>
+            <th>liveness</th>
+            <th>valence</th>
+            <th>tempo</th>
+            <th>duration_ms</th>
+            <th>time_signature</th>
+        </tr>
+        {% for dict_item in sorted_array %}
+            <tr>
+                <td>{{ dict_item["name"] }}</td>
+                <td>{{ dict_item["artist"] }}</td>
+                <td>{{ dict_item["danceability"] }}</td>
+                <td>{{ dict_item["energy"] }}</td>
+                <td>{{ dict_item["key"] }}</td> 
+                <td>{{ dict_item["loudness"] }}</td>
+                <td>{{ dict_item["mode"] }}</td> 
+                <td>{{ dict_item["speechiness"] }}</td>
+                <td>{{ dict_item["acousticness"] }}</td>
+                <td>{{ dict_item["instrumentalness"] }}</td>
+                <td>{{ dict_item["liveness"] }}</td>
+                <td>{{ dict_item["valence"] }}</td>
+                <td>{{ dict_item["tempo"] }}</td>
+                <td>{{ dict_item["duration_ms"] }}</td>
+                <td>{{ dict_item["time_signature"] }}</td>
+            </tr>
+        {% endfor %}
+    </table> 
+    
 </html>
