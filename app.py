@@ -3,6 +3,7 @@ import json
 from flask import Flask, request, redirect, g, render_template
 import requests
 from urllib.parse import quote
+import pandas as pd
 
 # Authentication Steps, paramaters, and responses are defined at https://developer.spotify.com/web-api/authorization-guide/
 # Visit this url to see all the steps, parameters, and expected response.
@@ -11,8 +12,8 @@ from urllib.parse import quote
 app = Flask(__name__)
 
 #  Client Keys
-#CLIENT_ID = os.getenv('CLIENT_ID')
-#CLIENT_SECRET = os.getenv('CLIENT_SECRET')
+CLIENT_ID = os.getenv('CLIENT_ID')
+CLIENT_SECRET = os.getenv('CLIENT_SECRET')
 
 # Spotify URLS
 SPOTIFY_AUTH_URL = "https://accounts.spotify.com/authorize"
@@ -22,9 +23,9 @@ API_VERSION = "v1"
 SPOTIFY_API_URL = "{}/{}".format(SPOTIFY_API_BASE_URL, API_VERSION)
 
 # Server-side Parameters
-#CLIENT_SIDE_URL = os.getenv('HEROKU_URL')
-CLIENT_SIDE_URL = "http://127.0.0.1"
-PORT = 8080
+CLIENT_SIDE_URL = os.getenv('HEROKU_URL')
+#CLIENT_SIDE_URL = "http://127.0.0.1"
+#PORT = 8080
 REDIRECT_URI = "{}:{}/callback/q".format(CLIENT_SIDE_URL, PORT)
 SCOPE = "user-library-read"
 STATE = ""
@@ -79,7 +80,7 @@ def callback():
         "offset" : 0
     }
 
-    display_arr = []
+    df = pd.DataFrame()
     #max = 22
     max = 1
     for _ in range(0, max):
@@ -93,11 +94,11 @@ def callback():
                 song_data = song_response.json()
                 #print("Received song ", song_data)
                 song_data["name"] = song["track"]["name"]
-                display_arr.append(song_data)
+                df.append(pd.read_json([song_data], orient='records'))
         params["offset"] += 50;    
 
     # Combine profile and playlist data to display
-    return render_template("index.html", sorted_array=display_arr)
+    return render_template("index.html", display=df.to_string)
 
 if __name__ == "__main__":
     app.run(debug=True, port=PORT)
