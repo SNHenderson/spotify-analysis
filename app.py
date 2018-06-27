@@ -26,7 +26,7 @@ SPOTIFY_API_URL = "{}/{}".format(SPOTIFY_API_BASE_URL, API_VERSION)
 CLIENT_SIDE_URL = os.getenv('HEROKU_URL')
 #CLIENT_SIDE_URL = "http://127.0.0.1"
 #PORT = 8080
-REDIRECT_URI = "{}:{}/callback/q".format(CLIENT_SIDE_URL, PORT)
+REDIRECT_URI = "{}:{}/callback/q".format(CLIENT_SIDE_URL)
 SCOPE = "user-library-read"
 STATE = ""
 SHOW_DIALOG_bool = True
@@ -101,4 +101,4 @@ def callback():
     return render_template("index.html", display=df.to_string)
 
 if __name__ == "__main__":
-    app.run(debug=True, port=PORT)
+    app.run(debug=True)
