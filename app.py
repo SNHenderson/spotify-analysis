@@ -80,10 +80,10 @@ def callback():
         "offset" : 0
     }
 
-    df = pd.DataFrame()
+    
+    songs = []
     #max = 22
     max = 1
-    idx = 0
     for _ in range(0, max):
         songs_response = requests.get(songs_api_endpoint, headers=authorization_header, params=params)
         songs_data = songs_response.json()
@@ -95,9 +95,10 @@ def callback():
                 song_data = song_response.json()
                 #print("Received song ", song_data)
                 song_data["name"] = song["track"]["name"]
-                df.append(pd.DataFrame(song_data, index=[idx]))
-                idx += 1
-        params["offset"] += 50;    
+                songs.append(song_data)
+        params["offset"] += 50;  
+
+    df = pd.DataFrame(songs)
 
     # Combine profile and playlist data to display
     return render_template("index.html", display=df.to_string())
