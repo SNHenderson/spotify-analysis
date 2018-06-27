@@ -79,6 +79,7 @@ def callback():
 
     display_arr = []
     for _ in range(0,22):
+        render_template("index.html", sorted_array=display_arr)
         songs_response = requests.get(songs_api_endpoint, headers=authorization_header, params=params)
         songs_data = json.loads(songs_response.text)
         params["offset"] += 50;
