@@ -78,8 +78,9 @@ def callback():
     }
 
     display_arr = []
-    for _ in range(0,22):
-        render_template("index.html", sorted_array=display_arr)
+    #max = 22
+    max = 1
+    for _ in range(0, max):
         songs_response = requests.get(songs_api_endpoint, headers=authorization_header, params=params)
         songs_data = json.loads(songs_response.text)
         if songs_data and "items" in songs_data:
@@ -88,7 +89,6 @@ def callback():
                 song_response = requests.get(song_api_endpoint, headers=authorization_header)
                 song_data = json.loads(song_response.text)
                 display_arr.extend(song_data)
-        render_template("index.html", sorted_array=display_arr)
         params["offset"] += 50;    
 
     # Combine profile and playlist data to display
