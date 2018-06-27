@@ -82,8 +82,13 @@ def callback():
         render_template("index.html", sorted_array=display_arr)
         songs_response = requests.get(songs_api_endpoint, headers=authorization_header, params=params)
         songs_data = json.loads(songs_response.text)
-        params["offset"] += 50;
-        display_arr.extend(songs_data["items"])
+        for song in songs_data["items"]:
+            song_api_endpoint = "{}/audio-features/{}".format(SPOTIFY_API_URL, song["id"])
+            song_response = requests.get(song_api_endpoint, headers=authorization_header)
+            song_data = json.loads(song_response.text)
+            display_arr.extend(song_data)
+        render_template("index.html", sorted_array=display_arr)
+        params["offset"] += 50;    
 
     # Combine profile and playlist data to display
     return render_template("index.html", sorted_array=display_arr)
