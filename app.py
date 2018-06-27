@@ -94,7 +94,7 @@ def callback():
                 song_data = song_response.json()
                 #print("Received song ", song_data)
                 song_data["name"] = song["track"]["name"]
-                df.append(pd.read_json([song_data], orient='records'))
+                df.append(pd.DataFrame.from_dict(song_data))
         params["offset"] += 50;    
 
     # Combine profile and playlist data to display
