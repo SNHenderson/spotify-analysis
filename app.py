@@ -83,7 +83,7 @@ def callback():
         songs_response = requests.get(songs_api_endpoint, headers=authorization_header, params=params)
         songs_data = json.loads(songs_response.text)
         for song in songs_data["items"]:
-            song_api_endpoint = "{}/audio-features/{}".format(SPOTIFY_API_URL, song["id"])
+            song_api_endpoint = "{}/audio-features/{}".format(SPOTIFY_API_URL, song["track"]["id"])
             song_response = requests.get(song_api_endpoint, headers=authorization_header)
             song_data = json.loads(song_response.text)
             display_arr.extend(song_data)
