@@ -1,9 +1,14 @@
 import os
-import json
+from threading import Thread
+from io import BytesIO
 from flask import Flask, request, redirect, g, render_template
 import requests
 from urllib.parse import quote
 import pandas as pd
+import matplotlib
+matplotlib.use('agg')
+import matplotlib.pyplot as plt
+import base64
 
 # Authentication Steps, paramaters, and responses are defined at https://developer.spotify.com/web-api/authorization-guide/
 # Visit this url to see all the steps, parameters, and expected response.
@@ -26,7 +31,7 @@ SPOTIFY_API_URL = "{}/{}".format(SPOTIFY_API_BASE_URL, API_VERSION)
 CLIENT_SIDE_URL = os.getenv('HEROKU_URL')
 #CLIENT_SIDE_URL = "http://127.0.0.1"
 #PORT = 8080
-REDIRECT_URI = "{}/callback/q".format(CLIENT_SIDE_URL)
+REDIRECT_URI = "{}:{}/callback/q".format(CLIENT_SIDE_URL)
 SCOPE = "user-library-read"
 STATE = ""
 SHOW_DIALOG_bool = True
@@ -40,6 +45,8 @@ auth_query_parameters = {
     # "show_dialog": SHOW_DIALOG_str,
     "client_id": CLIENT_ID
 }
+
+AUTH_HEADER = ""
 
 
 @app.route("/")
@@ -64,44 +71,73 @@ def callback():
     post_request = requests.post(SPOTIFY_TOKEN_URL, data=code_payload)
 
     # Auth Step 5: Tokens are Returned to Application
-    response_data = json.loads(post_request.text)
+    response_data = post_request.json()
     access_token = response_data["access_token"]
     refresh_token = response_data["refresh_token"]
     token_type = response_data["token_type"]
     expires_in = response_data["expires_in"]
 
     # Auth Step 6: Use the access token to access Spotify API
-    authorization_header = {"Authorization": "Bearer {}".format(access_token)}
+    AUTH_HEADER = {"Authorization": "Bearer {}".format(access_token)}
 
+    thread = Thread(target=data_grab)
+    thread.start()
+    return render_template("loading.html")
+
+@app.route("/data")
+def data_view():
+    try:
+        df = pd.read_pickle("./song_data.pkl")
+    except Exception as e:
+        print(e)
+        return render_template("loading.html")
+    figures = []
+    for col in df.columns:
+        if(col != 'name'):
+            fig = df[col].astype(float).sort_values().plot(kind = 'box', legend=True).get_figure()
+            png_output = BytesIO()
+            fig.savefig(png_output, format='png')
+            png_output.seek(0)
+            figdata_png = base64.b64encode(png_output.getvalue()).decode('ascii')
+            figures.append(figdata_png)
+            plt.clf()
+
+            fig = df[col].astype(float).sort_values().plot(kind = 'hist', legend=True).get_figure()
+            png_output = BytesIO()
+            fig.savefig(png_output, format='png')
+            png_output.seek(0)
+            figdata_png = base64.b64encode(png_output.getvalue()).decode('ascii')
+            figures.append(figdata_png)
+            plt.clf()
+    return render_template('output.html', data=df, figures=figures) 
+
+def data_grab():
     # Get saved songs data
     songs_api_endpoint = "{}/me/tracks".format(SPOTIFY_API_URL)
     params = {
         "limit" : 50,
         "offset" : 0
     }
-
     
     songs = []
-    #max = 22
-    max = 1
+    max = 22
     for _ in range(0, max):
-        songs_response = requests.get(songs_api_endpoint, headers=authorization_header, params=params)
+        songs_response = requests.get(songs_api_endpoint, headers=AUTH_HEADER, params=params)
         songs_data = songs_response.json()
         if songs_data and "items" in songs_data:
             for song in songs_data["items"]:
                 song_api_endpoint = "{}/audio-features/{}".format(SPOTIFY_API_URL, song["track"]["id"])
                 #print("Sending request to ", song_api_endpoint)
-                song_response = requests.get(song_api_endpoint, headers=authorization_header)
+                song_response = requests.get(song_api_endpoint, headers=AUTH_HEADER)
                 song_data = song_response.json()
                 #print("Received song ", song_data)
                 song_data["name"] = song["track"]["name"]
                 songs.append(song_data)
         params["offset"] += 50;  
+        print("Loaded ", params["offset"], "/", max*50, " songs")
 
     df = pd.DataFrame(songs).drop(columns=['analysis_url', 'id', 'track_href', 'type', 'uri'])
-
-    # Combine profile and playlist data to display
-    return render_template("index.html", display=df)
+    df.to_pickle("./song_data.pkl")
 
 if __name__ == "__main__":
     app.run(debug=True)

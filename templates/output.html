@@ -1,0 +1,10 @@
+<html>
+	<body>
+		<p>
+			<pre> {{data}} </pre>
+			{% for figure in figures %}
+				<img src="data:image/png;base64,{{ figure }}">
+			{% endfor %}
+		</p>
+	</body>
+</html>
