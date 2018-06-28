@@ -95,6 +95,7 @@ def data_view():
     figures = []
     for col in df.columns:
         if(col != 'name'):
+            print(col)
             fig = df[col].astype(float).sort_values().plot(kind = 'box', legend=True).get_figure()
             png_output = BytesIO()
             fig.savefig(png_output, format='png')
