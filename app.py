@@ -120,7 +120,7 @@ def data_grab(header):
     }
     
     songs = []
-    max = 1
+    max = 22
     for _ in range(0, max):
         songs_response = requests.get(songs_api_endpoint, headers=header, params=params)
         songs_data = songs_response.json()
