@@ -124,6 +124,7 @@ def data_grab():
     for _ in range(0, max):
         songs_response = requests.get(songs_api_endpoint, headers=AUTH_HEADER, params=params)
         songs_data = songs_response.json()
+        print(songs_data)
         if songs_data and "items" in songs_data:
             for song in songs_data["items"]:
                 song_api_endpoint = "{}/audio-features/{}".format(SPOTIFY_API_URL, song["track"]["id"])
