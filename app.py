@@ -49,7 +49,6 @@ auth_query_parameters = {
 
 AUTH_HEADER = ""
 
-
 @app.route("/")
 def index():
     # Auth Step 1: Authorization
@@ -95,7 +94,6 @@ def data_view():
     figures = []
     for col in df.columns:
         if(col != 'name'):
-            print(col)
             fig = df[col].astype(float).sort_values().plot(kind = 'box', legend=True).get_figure()
             png_output = BytesIO()
             fig.savefig(png_output, format='png')
@@ -122,7 +120,7 @@ def data_grab(header):
     }
     
     songs = []
-    max = 22
+    max = 1
     for _ in range(0, max):
         songs_response = requests.get(songs_api_endpoint, headers=header, params=params)
         songs_data = songs_response.json()
