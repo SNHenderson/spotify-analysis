@@ -127,10 +127,10 @@ def data_grab():
         if songs_data and "items" in songs_data:
             for song in songs_data["items"]:
                 song_api_endpoint = "{}/audio-features/{}".format(SPOTIFY_API_URL, song["track"]["id"])
-                #print("Sending request to ", song_api_endpoint)
+                print("Sending request to ", song_api_endpoint)
                 song_response = requests.get(song_api_endpoint, headers=AUTH_HEADER)
                 song_data = song_response.json()
-                #print("Received song ", song_data)
+                print("Received song ", song_data)
                 song_data["name"] = song["track"]["name"]
                 songs.append(song_data)
         params["offset"] += 50;  
