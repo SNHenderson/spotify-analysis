@@ -130,7 +130,9 @@ def data_grab(header):
                 #print("Sending request to ", song_api_endpoint)
                 song_response = requests.get(song_api_endpoint, headers=header)
                 if(song_response.status_code == 429):
-                    time.sleep(song_response['Retry-After'])
+                    seconds = song_response["Retry-After"]
+                    print("Waiting for ", seconds, " seconds")
+                    time.sleep(seconds)
                 song_data = song_response.json()
                 #print("Received song ", song_data)
                 song_data["name"] = song["track"]["name"]
