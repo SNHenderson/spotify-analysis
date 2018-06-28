@@ -72,7 +72,6 @@ def callback():
 
     # Auth Step 5: Tokens are Returned to Application
     response_data = post_request.json()
-    print(response_data)
     access_token = response_data["access_token"]
     refresh_token = response_data["refresh_token"]
     token_type = response_data["token_type"]
@@ -125,14 +124,14 @@ def data_grab(header):
     for _ in range(0, max):
         songs_response = requests.get(songs_api_endpoint, headers=header, params=params)
         songs_data = songs_response.json()
-        print(songs_data)
+        #print(songs_data)
         if songs_data and "items" in songs_data:
             for song in songs_data["items"]:
                 song_api_endpoint = "{}/audio-features/{}".format(SPOTIFY_API_URL, song["track"]["id"])
-                print("Sending request to ", song_api_endpoint)
+                #print("Sending request to ", song_api_endpoint)
                 song_response = requests.get(song_api_endpoint, headers=header)
                 song_data = song_response.json()
-                print("Received song ", song_data)
+                #print("Received song ", song_data)
                 song_data["name"] = song["track"]["name"]
                 songs.append(song_data)
         params["offset"] += 50;  
