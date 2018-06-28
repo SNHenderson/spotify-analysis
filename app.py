@@ -81,7 +81,7 @@ def callback():
     # Auth Step 6: Use the access token to access Spotify API
     AUTH_HEADER = {"Authorization": "Bearer {}".format(access_token)}
 
-    thread = Thread(target=data_grab, args=(AUTH_HEADER))
+    thread = Thread(target=data_grab, kwargs={'header': AUTH_HEADER})
     thread.start()
     return render_template("loading.html")
 
@@ -112,7 +112,7 @@ def data_view():
             plt.clf()
     return render_template('output.html', data=df, figures=figures) 
 
-def data_grab(AUTH_HEADER):
+def data_grab(header):
     # Get saved songs data
     songs_api_endpoint = "{}/me/tracks".format(SPOTIFY_API_URL)
     params = {
