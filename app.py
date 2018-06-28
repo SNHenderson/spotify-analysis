@@ -1,4 +1,4 @@
-import os
+import os, time, base64
 from threading import Thread
 from io import BytesIO
 from flask import Flask, request, redirect, g, render_template
@@ -8,7 +8,6 @@ import pandas as pd
 import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
-import base64
 
 # Authentication Steps, paramaters, and responses are defined at https://developer.spotify.com/web-api/authorization-guide/
 # Visit this url to see all the steps, parameters, and expected response.
@@ -130,6 +129,8 @@ def data_grab(header):
                 song_api_endpoint = "{}/audio-features/{}".format(SPOTIFY_API_URL, song["track"]["id"])
                 #print("Sending request to ", song_api_endpoint)
                 song_response = requests.get(song_api_endpoint, headers=header)
+                if(song_response.status_code == 429):
+                    time.sleep(song_response['Retry-After'])
                 song_data = song_response.json()
                 #print("Received song ", song_data)
                 song_data["name"] = song["track"]["name"]
