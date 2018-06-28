@@ -135,10 +135,11 @@ def data_grab(header):
                     seconds = song_response.headers["Retry-After"]
                     print("Waiting for ", seconds, " seconds")
                     time.sleep(int(seconds))
-                song_data = song_response.json()
-                #print("Received song ", song_data)
-                song_data["name"] = song["track"]["name"]
-                songs.append(song_data)
+                else:
+                    song_data = song_response.json()
+                    #print("Received song ", song_data)
+                    song_data["name"] = song["track"]["name"]
+                    songs.append(song_data)
         params["offset"] += 50;  
         print("Loaded ", params["offset"], "/", max*50, " songs")
 
