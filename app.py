@@ -132,7 +132,7 @@ def data_grab(header):
                 if(song_response.status_code == 429):
                     seconds = song_response["Retry-After"]
                     print("Waiting for ", seconds, " seconds")
-                    time.sleep((int)seconds)
+                    time.sleep((int(seconds))
                 song_data = song_response.json()
                 #print("Received song ", song_data)
                 song_data["name"] = song["track"]["name"]
