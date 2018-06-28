@@ -28,9 +28,11 @@ SPOTIFY_API_URL = "{}/{}".format(SPOTIFY_API_BASE_URL, API_VERSION)
 
 # Server-side Parameters
 CLIENT_SIDE_URL = os.getenv('HEROKU_URL')
-#CLIENT_SIDE_URL = "http://127.0.0.1"
-#PORT = 8080
 REDIRECT_URI = "{}/callback/q".format(CLIENT_SIDE_URL)
+# CLIENT_SIDE_URL = "http://127.0.0.1"
+# PORT = 8080
+# REDIRECT_URI = "{}:{}/callback/q".format(CLIENT_SIDE_URL, PORT)
+
 SCOPE = "user-library-read"
 STATE = ""
 SHOW_DIALOG_bool = True
@@ -140,8 +142,8 @@ def data_grab(header):
         params["offset"] += 50;  
         print("Loaded ", params["offset"], "/", max*50, " songs")
 
-    df = pd.DataFrame(songs).drop(columns=['analysis_url', 'id', 'track_href', 'type', 'uri'])
+    df = pd.DataFrame(songs).drop(columns=['analysis_url', 'id', 'track_href', 'type', 'uri', 'key', 'mode', 'time_signature'])
     df.to_pickle("./song_data.pkl")
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, port=PORT)
