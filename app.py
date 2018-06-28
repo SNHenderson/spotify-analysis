@@ -142,7 +142,7 @@ def data_grab(header):
         params["offset"] += 50;  
         print("Loaded ", params["offset"], "/", max*50, " songs")
 
-    df = pd.DataFrame(songs).drop(columns=['analysis_url', 'id', 'track_href', 'type', 'uri', 'key', 'mode', 'time_signature']).dropna()
+    df = pd.DataFrame(songs).drop(columns=['analysis_url', 'id', 'track_href', 'type', 'uri', 'key', 'mode', 'time_signature']).dropna(axis=1, how='all')
     df.to_pickle("./song_data.pkl")
 
 if __name__ == "__main__":
