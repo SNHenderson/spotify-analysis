@@ -72,6 +72,7 @@ def callback():
 
     # Auth Step 5: Tokens are Returned to Application
     response_data = post_request.json()
+    print(response_data)
     access_token = response_data["access_token"]
     refresh_token = response_data["refresh_token"]
     token_type = response_data["token_type"]
