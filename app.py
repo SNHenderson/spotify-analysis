@@ -8,6 +8,10 @@ import pandas as pd
 import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
+import pickle
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import IsolationForest
+import numpy as np
 
 # Authentication Steps, paramaters, and responses are defined at https://developer.spotify.com/web-api/authorization-guide/
 # Visit this url to see all the steps, parameters, and expected response.
@@ -27,11 +31,11 @@ API_VERSION = "v1"
 SPOTIFY_API_URL = "{}/{}".format(SPOTIFY_API_BASE_URL, API_VERSION)
 
 # Server-side Parameters
-CLIENT_SIDE_URL = os.getenv('HEROKU_URL')
-REDIRECT_URI = "{}/callback/q".format(CLIENT_SIDE_URL)
-#CLIENT_SIDE_URL = "http://127.0.0.1"
-#PORT = 8080
-#REDIRECT_URI = "{}:{}/callback/q".format(CLIENT_SIDE_URL, PORT)
+#CLIENT_SIDE_URL = os.getenv('HEROKU_URL')
+#REDIRECT_URI = "{}/callback/q".format(CLIENT_SIDE_URL)
+CLIENT_SIDE_URL = "http://127.0.0.1"
+PORT = 8080
+REDIRECT_URI = "{}:{}/callback/q".format(CLIENT_SIDE_URL, PORT)
 
 SCOPE = "user-library-read"
 STATE = ""
@@ -80,9 +84,43 @@ def callback():
     # Auth Step 6: Use the access token to access Spotify API
     AUTH_HEADER = {"Authorization": "Bearer {}".format(access_token)}
 
-    thread = Thread(target=data_grab, kwargs={'header': AUTH_HEADER})
+    try:
+        pd.read_pickle("./song_data.pkl")
+        return redirect("/data")
+    except Exception as e:
+        thread = Thread(target=data_grab, kwargs={'header': AUTH_HEADER})
+        thread.start()
+        return render_template("loading.html")
+
+@app.route("/learn")
+def load_learn():
+    thread = Thread(target=data_learn)
     thread.start()
     return render_template("loading.html")
+
+def data_learn():    
+    rng = np.random.RandomState(42)
+    df = pd.read_pickle("./song_data.pkl")
+    print("Splitting data")
+    X_train, X_test, y_train, y_test = train_test_split(df.drop('name',axis=1), df['name'], test_size=0.30)
+    clf = IsolationForest(random_state=rng, n_jobs=1)
+    print("Fitting data")
+    clf.fit(X_train, y_train)
+
+    predictions = clf.predict(X_test)
+    print(y_test)
+    names = list(zip(y_test, predictions))
+    count = 0
+    for pair in names:
+        if(pair[1] < 0):
+            print(pair[0])
+            count += 1
+
+    print("{}/{} misclassified: {}%".format(count, len(y_test), count/len(y_test)))
+
+    with open('clf.pkl', 'wb') as fid:
+        print("Saved model")
+        pickle.dump(clf, fid, 2) 
 
 @app.route("/data")
 def data_view():
