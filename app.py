@@ -31,11 +31,11 @@ API_VERSION = "v1"
 SPOTIFY_API_URL = "{}/{}".format(SPOTIFY_API_BASE_URL, API_VERSION)
 
 # Server-side Parameters
-#CLIENT_SIDE_URL = os.getenv('HEROKU_URL')
-#REDIRECT_URI = "{}/callback/q".format(CLIENT_SIDE_URL)
-CLIENT_SIDE_URL = "http://127.0.0.1"
-PORT = 8080
-REDIRECT_URI = "{}:{}/callback/q".format(CLIENT_SIDE_URL, PORT)
+CLIENT_SIDE_URL = os.getenv('HEROKU_URL')
+REDIRECT_URI = "{}/callback/q".format(CLIENT_SIDE_URL)
+#CLIENT_SIDE_URL = "http://127.0.0.1"
+#PORT = 8080
+#REDIRECT_URI = "{}:{}/callback/q".format(CLIENT_SIDE_URL, PORT)
 
 SCOPE = "user-library-read"
 STATE = ""
