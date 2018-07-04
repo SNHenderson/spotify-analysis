@@ -33,11 +33,11 @@ SPOTIFY_API_URL = "{}/{}".format(SPOTIFY_API_BASE_URL, API_VERSION)
 # Server-side Parameters
 CLIENT_SIDE_URL = os.getenv('HEROKU_URL')
 REDIRECT_URI = "{}/callback/q".format(CLIENT_SIDE_URL)
-#CLIENT_SIDE_URL = "http://127.0.0.1"
-#PORT = 8080
-#REDIRECT_URI = "{}:{}/callback/q".format(CLIENT_SIDE_URL, PORT)
+# CLIENT_SIDE_URL = "http://127.0.0.1"
+# PORT = 8080
+# REDIRECT_URI = "{}:{}/callback/q".format(CLIENT_SIDE_URL, PORT)
 
-SCOPE = "user-library-read"
+SCOPE = "user-library-read playlist-read-private playlist-read-collaborative"
 STATE = ""
 SHOW_DIALOG_bool = True
 SHOW_DIALOG_str = str(SHOW_DIALOG_bool).lower()
@@ -58,6 +58,7 @@ def index():
     # Auth Step 1: Authorization
     url_args = "&".join(["{}={}".format(key, quote(val)) for key, val in auth_query_parameters.items()])
     auth_url = "{}/?{}".format(SPOTIFY_AUTH_URL, url_args)
+    print(auth_url)
     return redirect(auth_url)
 
 
@@ -84,6 +85,9 @@ def callback():
     # Auth Step 6: Use the access token to access Spotify API
     AUTH_HEADER = {"Authorization": "Bearer {}".format(access_token)}
 
+    with open('header.pkl', 'wb') as fid:
+        pickle.dump(AUTH_HEADER, fid, 2) 
+
     try:
         pd.read_pickle("./song_data.pkl")
         return redirect("/data")
@@ -96,6 +100,12 @@ def callback():
 def load_learn():
     thread = Thread(target=data_learn)
     thread.start()
+    playlists_api_endpoint = "{}/me/playlists/".format(SPOTIFY_API_URL)
+    params = {
+        "limit" : 50,
+        "offset" : 0
+    }
+    
     return render_template("loading.html")
 
 def data_learn():    
@@ -103,7 +113,7 @@ def data_learn():
     df = pd.read_pickle("./song_data.pkl")
     print("Splitting data")
     X_train, X_test, y_train, y_test = train_test_split(df.drop('name',axis=1), df['name'], test_size=0.30)
-    clf = IsolationForest(random_state=rng, n_jobs=1)
+    clf = IsolationForest(random_state=rng, n_jobs=1, contamination=0)
     print("Fitting data")
     clf.fit(X_train, y_train)
 
@@ -180,7 +190,7 @@ def data_grab(header):
         params["offset"] += 50;  
         print("Loaded ", params["offset"], "/", max*50, " songs")
 
-    df = pd.DataFrame(songs).drop(columns=['analysis_url', 'id', 'track_href', 'type', 'uri', 'key', 'mode', 'time_signature']).dropna(axis=1, how='all')
+    df = pd.DataFrame(songs).drop(columns=['analysis_url', 'id', 'track_href', 'type', 'uri', 'key', 'mode', 'time_signature'])
     df.to_pickle("./song_data.pkl")
 
 if __name__ == "__main__":

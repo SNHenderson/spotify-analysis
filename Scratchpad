@@ -1,0 +1,12 @@
+Front Page:
+
+Check if songs are already downloaded
+
+	If so: Display data
+		Check if graphs are saved
+			If so, display graphs
+			If not, load graphs, save and display
+	If not: Load data and display graphs (8)
+
+	Choose playlist to classify (N songs, N >= 1)
+	
