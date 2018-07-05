@@ -1,4 +1,4 @@
-import os, time, base64
+import os, time, base64, errno
 from threading import Thread
 from io import BytesIO
 from flask import Flask, request, redirect, g, render_template, jsonify
@@ -56,6 +56,11 @@ AUTH_HEADER = ""
 
 @app.route("/")
 def index():
+    try:
+        os.makedirs(directory)
+    except OSError as e:
+        if e.errno != errno.EEXIST:
+            raise
     # Auth Step 1: Authorization
     url_args = "&".join(["{}={}".format(key, quote(val)) for key, val in auth_query_parameters.items()])
     auth_url = "{}/?{}".format(SPOTIFY_AUTH_URL, url_args)
