@@ -1,7 +1,7 @@
 import os, time, base64
 from threading import Thread
 from io import BytesIO
-from flask import Flask, request, redirect, g, render_template
+from flask import Flask, request, redirect, g, render_template, jsonify
 import requests
 from urllib.parse import quote
 import pandas as pd
@@ -12,6 +12,7 @@ import pickle
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import IsolationForest
 import numpy as np
+import json
 
 # Authentication Steps, paramaters, and responses are defined at https://developer.spotify.com/web-api/authorization-guide/
 # Visit this url to see all the steps, parameters, and expected response.
@@ -81,117 +82,221 @@ def callback():
     refresh_token = response_data["refresh_token"]
     token_type = response_data["token_type"]
     expires_in = response_data["expires_in"]
+    expire = {'expires':time.time() + expires_in, 'refresh':refresh_token}
 
     # Auth Step 6: Use the access token to access Spotify API
     AUTH_HEADER = {"Authorization": "Bearer {}".format(access_token)}
 
-    with open('header.pkl', 'wb') as fid:
+    with open('auth/header.pkl', 'wb') as fid:
         pickle.dump(AUTH_HEADER, fid, 2) 
 
-    try:
-        pd.read_pickle("./song_data.pkl")
-        return redirect("/data")
-    except Exception as e:
-        thread = Thread(target=data_grab, kwargs={'header': AUTH_HEADER})
-        thread.start()
-        return render_template("loading.html")
 
-@app.route("/learn")
-def load_learn():
-    thread = Thread(target=data_learn)
+    with open('auth/expire.pkl', 'wb') as fid:
+        pickle.dump(expire, fid, 2) 
+    thread = Thread(target=data_grab, kwargs={'header': AUTH_HEADER})
     thread.start()
-    playlists_api_endpoint = "{}/me/playlists/".format(SPOTIFY_API_URL)
-    params = {
-        "limit" : 50,
-        "offset" : 0
+    return render_template("auth.html")
+
+def check_token():
+    pkl_file = open('auth/expire.pkl', 'rb')
+    expire = pickle.load(pkl_file)
+    if time.time() < expire['expires']:
+        return
+
+    code_payload = {
+        "grant_type": "refresh_token",
+        "refresh_token": expire['refresh'],
+        'client_id': CLIENT_ID,
+        'client_secret': CLIENT_SECRET,
     }
+    post_request = requests.post(SPOTIFY_TOKEN_URL, data=code_payload)
+    response_data = post_request.json()
+    access_token = response_data["access_token"]
     
-    return render_template("loading.html")
+    if('refresh_token' in response_data):
+        refresh_token = response_data["refresh_token"]
+    else:
+        refresh_token = expire['refresh']
+    
+    if('expires_in' in response_data):
+        expires_in = response_data["expires_in"]
+    else:
+        expires_in = expire['expires']
+    
+    expire = {'expires':time.time() + expires_in, 'refresh':refresh_token}
 
-def data_learn():    
-    rng = np.random.RandomState(42)
-    df = pd.read_pickle("./song_data.pkl")
-    print("Splitting data")
-    X_train, X_test, y_train, y_test = train_test_split(df.drop('name',axis=1), df['name'], test_size=0.30)
-    clf = IsolationForest(random_state=rng, n_jobs=1, contamination=0)
-    print("Fitting data")
-    clf.fit(X_train, y_train)
+    AUTH_HEADER = {"Authorization": "Bearer {}".format(access_token)}
 
-    predictions = clf.predict(X_test)
-    print(y_test)
-    names = list(zip(y_test, predictions))
-    count = 0
-    for pair in names:
-        if(pair[1] < 0):
-            print(pair[0])
-            count += 1
+    with open('auth/header.pkl', 'wb') as fid:
+        pickle.dump(AUTH_HEADER, fid, 2) 
 
-    print("{}/{} misclassified: {}%".format(count, len(y_test), count/len(y_test)))
+    with open('auth/expire.pkl', 'wb') as fid:
+        pickle.dump(expire, fid, 2) 
 
-    with open('clf.pkl', 'wb') as fid:
-        print("Saved model")
-        pickle.dump(clf, fid, 2) 
+def plot_corr(df, size=10):
+    '''Function plots a graphical correlation matrix for each pair of columns in the dataframe.
 
-@app.route("/data")
-def data_view():
-    try:
-        df = pd.read_pickle("./song_data.pkl")
-    except Exception as e:
-        print(e)
-        return render_template("loading.html")
+    Input:
+        df: pandas DataFrame
+        size: vertical and horizontal size of the plot'''
+    corr = df.corr()
+    fig, ax = plt.subplots(figsize=(size, size))
+    ax.matshow(corr)
+    plt.xticks(range(len(corr.columns)), corr.columns);
+    plt.yticks(range(len(corr.columns)), corr.columns);
+    return plt
+
+def get_png(fig):
+    png_output = BytesIO()
+    fig.savefig(png_output, format='png')
+    png_output.seek(0)
+    figdata_png = base64.b64encode(png_output.getvalue()).decode('ascii')
+    plt.clf()
+    return(figdata_png)
+
+@app.route("/data/<filename>")
+def data_page(filename):
+    data = data_view(filename).get_json()
+    return render_template('output.html', data=data)
+
+@app.route("/api/data/<filename>")
+def data_view(filename):
+    check_token()
+    url = "./data/" + filename
+    print(url)
+    df = pd.read_pickle(url)
     figures = []
     for col in df.columns:
         if(col != 'name'):
             fig = df[col].astype(float).sort_values().plot(kind = 'box', legend=True).get_figure()
-            png_output = BytesIO()
-            fig.savefig(png_output, format='png')
-            png_output.seek(0)
-            figdata_png = base64.b64encode(png_output.getvalue()).decode('ascii')
-            figures.append(figdata_png)
-            plt.clf()
-
+            figures.append(get_png(fig))
             fig = df[col].astype(float).sort_values().plot(kind = 'hist', legend=True).get_figure()
-            png_output = BytesIO()
-            fig.savefig(png_output, format='png')
-            png_output.seek(0)
-            figdata_png = base64.b64encode(png_output.getvalue()).decode('ascii')
-            figures.append(figdata_png)
-            plt.clf()
-    return render_template('output.html', data=df, figures=figures) 
+            figures.append(get_png(fig))
 
-def data_grab(header):
-    # Get saved songs data
-    songs_api_endpoint = "{}/me/tracks".format(SPOTIFY_API_URL)
+    fig = plot_corr(df, size=11).gcf()
+    figures.append(get_png(fig))
+    return jsonify({'figures': figures})
+
+def load_songs(url, limit):
+    check_token()
+    pkl_file = open('auth/header.pkl', 'rb')
+    header = pickle.load(pkl_file)
+    
     params = {
-        "limit" : 50,
+        "limit" : limit,
         "offset" : 0
     }
-    
-    songs = []
-    max = 22
-    for _ in range(0, max):
-        songs_response = requests.get(songs_api_endpoint, headers=header, params=params)
-        songs_data = songs_response.json()
-        #print(songs_data)
-        if songs_data and "items" in songs_data:
-            for song in songs_data["items"]:
-                song_api_endpoint = "{}/audio-features/{}".format(SPOTIFY_API_URL, song["track"]["id"])
-                #print("Sending request to ", song_api_endpoint)
-                song_response = requests.get(song_api_endpoint, headers=header)
-                if(song_response.status_code == 429):
-                    seconds = song_response.headers["Retry-After"]
-                    print("Waiting for ", seconds, " seconds")
-                    time.sleep(int(seconds))
-                else:
-                    song_data = song_response.json()
-                    #print("Received song ", song_data)
-                    song_data["name"] = song["track"]["name"]
-                    songs.append(song_data)
-        params["offset"] += 50;  
-        print("Loaded ", params["offset"], "/", max*50, " songs")
 
-    df = pd.DataFrame(songs).drop(columns=['analysis_url', 'id', 'track_href', 'type', 'uri', 'key', 'mode', 'time_signature'])
-    df.to_pickle("./song_data.pkl")
+    songs = []
+    while True:
+        songs_response = requests.get(url, headers=header, params=params)
+        songs_data = songs_response.json()
+        if songs_data and "items" in songs_data:
+            if len(songs_data["items"]) < 1:
+                print("Finished parsing songs")
+                break
+
+            song_api_endpoint = "{}/audio-features".format(SPOTIFY_API_URL)
+            song_ids = ",".join([song["track"]["id"] for song in songs_data["items"] if song["track"]["id"] is not None])
+            song_response = requests.get(song_api_endpoint, headers=header, params={"ids" : song_ids})
+            song_data = song_response.json()['audio_features']
+
+            for (song, features) in zip(songs_data["items"], song_data):
+                features.update( {"name" : song["track"]["name"], "popularity" : song["track"]["popularity"]} )
+
+            songs.extend(song_data)
+        else:
+            print("Error:", songs_data)
+            break    
+        params["offset"] += limit;  
+        print("Loaded ", params["offset"], " songs")
+
+    return songs
+
+@app.route("/api/load/", methods=['POST'])
+def data_grab(playlist_url = None, name = "song_data"):
+    if not request.get_json():
+        abort(400)
+
+    params = request.get_json()
+
+    if params['url']:
+        playlist_url = params['url']
+        limit = 100
+        playlist_url = playlist_url.replace("spotify:user:", "users/").replace(":playlist:", "/playlists/")
+        songs_api_endpoint = "{}/{}/tracks".format(SPOTIFY_API_URL, playlist_url)
+    else:
+        limit = 50
+        songs_api_endpoint = "{}/me/tracks".format(SPOTIFY_API_URL)
+    
+    songs = load_songs(songs_api_endpoint, limit)
+
+    df = pd.DataFrame(songs).drop(columns=['analysis_url', 'id', 'track_href', 'type', 'uri'])
+
+    if params['name']:
+        name = params['name']
+
+    df.to_pickle("./data/" + name + ".pkl")
+    return jsonify({'Success': True})
+
+@app.route("/api/learn/")
+@app.route("/api/learn/<name>")
+def data_learn(name = "song_data"):
+    df = pd.read_pickle("./data/" + name + ".pkl")
+    #print("Splitting data")
+    X_train, X_test, y_train, y_test = train_test_split(df.drop('name',axis=1), df['name'], test_size=0.30)
+    clf = IsolationForest(contamination=0.1)
+    #print("Fitting data")
+    clf.fit(X_train, y_train)
+
+    predictions = clf.predict(X_test)
+
+    unmatch = [name for name, predict in zip(y_test, predictions) if predict < 0]
+    #print("Mismatched songs: \n", df.loc[df['name'].isin(unmatch)])
+    
+    count = len(unmatch)
+
+    #print("{}/{} misclassified: {:3f}%".format(count, len(y_test), (count/len(y_test)*100)))
+    #print(df.loc[df['name'].isin(unmatch)].describe())
+    
+    with open('clf.pkl', 'wb') as fid:
+        pickle.dump(clf, fid, 2) 
+    return jsonify({'Success': True, "Test mismatched %": count/len(y_test)*100})
+
+@app.route("/api/predict/", methods=['POST'])
+def predict():
+    if not request.get_json():
+        abort(400)
+
+    params = request.get_json()
+    if not params['url']:
+        abort(404)
+
+    playlist_url = params['url'].replace("spotify:user:", "users/").replace(":playlist:", "/playlists/")
+
+    songs_api_endpoint = "{}/{}/tracks".format(SPOTIFY_API_URL, playlist_url)
+    songs = load_songs(songs_api_endpoint, 100)
+
+    df = pd.DataFrame(songs).drop(columns=['analysis_url', 'id', 'track_href', 'type', 'uri'])
+    # 'key', 'mode', 'time_signature'
+    df.dropna(inplace=True)
+    
+    pkl_file = open('clf.pkl', 'rb')
+    clf = pickle.load(pkl_file)
+    predictions = clf.predict(df.drop('name', axis=1))
+    
+    y = df['name']
+    match = [name for name, predict in zip(y, predictions) if predict > 0]
+    print("Matched songs: \n", df.loc[df['name'].isin(match)])
+
+    unmatch = [name for name, predict in zip(y, predictions) if predict < 0]
+    
+    count = len(match)
+
+    #print("{}/{} misclassified: {:3f}%".format(count, len(y), (count/len(y)*100)))
+    #print("Matched: \n", df.loc[df['name'].isin(match)].describe())
+    #print("Unmatched: \n", df.loc[df['name'].isin(unmatch)].describe())    
+    return jsonify({'Success': True, "Matched songs": json.loads(df.loc[df['name'].isin(match)].to_json(orient='index')), "Misclassified" : count ,"Misclassified %" : count/len(y)*100})
 
 if __name__ == "__main__":
     app.run(debug=True, port=PORT)

@@ -1,9 +1,0 @@
-<doctype html>
-<html>
-  <body>
-  	<h2> Select playlist to check </h2>
-  	{% for dict_item in playlists %}
-  		<a href="{{ '/playlist/%s/%s'%(dict_item.owner.id|urlencode, dict_item.id|urlencode) }}"> {{dict_item.name}} </a>
-	{% endfor %}
-  </body>
-</html>
