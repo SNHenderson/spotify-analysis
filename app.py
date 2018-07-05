@@ -57,7 +57,7 @@ AUTH_HEADER = ""
 @app.route("/")
 def index():
     try:
-        os.makedirs(directory)
+        os.makedirs("auth")
     except OSError as e:
         if e.errno != errno.EEXIST:
             raise
