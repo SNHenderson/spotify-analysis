@@ -1,0 +1,44 @@
+<doctype html>
+<html>
+    <head>
+        <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='style.css') }}">
+        <title>Analyze Spotify Data</title>
+    </head>
+    <body>
+        <h2> Load data from Spotify </h2>
+        <form>
+            <fieldset>
+                <div class="form-group">
+                    <label for="url">Enter Spotify URI </label> <input id="url" type="text" class="form-control" placeholder="spotify:user:xxx:playlist:xxx" required>
+                </div>
+                <div class="form-group">
+                    <label for="name">Enter data name: </label> <input id="name" type="text" class="form-control" placeholder="Data name" required>
+                </div>
+                <input type="submit" value="Submit">
+            </fieldset>
+        </form>
+        <h2> Train model from data </h2>
+        <form>
+            <fieldset>
+                <div class="form-group">
+                    <label for="name">Enter data name: </label> <input id="load" type="text" class="form-control" placeholder="Data name" required>
+                </div>
+                <input type="submit" value="Submit">
+            </fieldset>
+        </form>
+        <h2> Predict new playlist based off model </h2>
+        <form>
+            <fieldset>
+                <div class="form-group">
+                    <label for="url">Enter Spotify URI </label> <input id="url" type="text" class="form-control" placeholder="spotify:user:xxx:playlist:xxx" required>
+                </div>
+                <input type="submit" value="Submit">
+            </fieldset>
+        </form>
+    </body>
+
+    <script src="js/analyze.js"></script>
+</html>
