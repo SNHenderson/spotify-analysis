@@ -98,8 +98,7 @@ def callback():
 
     with open('auth/expire.pkl', 'wb') as fid:
         pickle.dump(expire, fid, 2) 
-    thread = Thread(target=data_grab, kwargs={'header': AUTH_HEADER})
-    thread.start()
+
     return render_template("auth.html")
 
 def check_token():
