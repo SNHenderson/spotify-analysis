@@ -1,7 +1,7 @@
 import os, time, base64, errno
 from threading import Thread
 from io import BytesIO
-from flask import Flask, request, redirect, g, render_template, jsonify
+from flask import Flask, request, redirect, g, render_template, jsonify, abort
 import requests
 from urllib.parse import quote
 import pandas as pd
@@ -15,6 +15,7 @@ import numpy as np
 import json
 
 from spotify_analysis import app
+from spotify_analysis.views import check_token
 
 # Spotify URLS
 SPOTIFY_AUTH_URL = "https://accounts.spotify.com/authorize"
@@ -23,23 +24,45 @@ SPOTIFY_API_BASE_URL = "https://api.spotify.com"
 API_VERSION = "v1"
 SPOTIFY_API_URL = "{}/{}".format(SPOTIFY_API_BASE_URL, API_VERSION)
 
-# @app.route("/api/data/<filename>")
-# def data_view(filename):
-#     check_token()
-#     url = "./spotify_analysis/data/" + filename
-#     print(url)
-#     df = pd.read_pickle(url)
-#     figures = []
-#     for col in df.columns:
-#         if(col != 'name'):
-#             fig = df[col].astype(float).sort_values().plot(kind = 'box', legend=True).get_figure()
-#             figures.append(get_png(fig))
-#             fig = df[col].astype(float).sort_values().plot(kind = 'hist', legend=True).get_figure()
-#             figures.append(get_png(fig))
+# Unused Currently
+# def plot_corr(df, size=10):
+#     '''Function plots a graphical correlation matrix for each pair of columns in the dataframe.
 
-#     fig = plot_corr(df, size=11).gcf()
-#     figures.append(get_png(fig))
-#     return jsonify({'figures': figures})
+#     Input:
+#         df: pandas DataFrame
+#         size: vertical and horizontal size of the plot'''
+#     corr = df.corr()
+#     fig, ax = plt.subplots(figsize=(size, size))
+#     ax.matshow(corr)
+#     plt.xticks(range(len(corr.columns)), corr.columns);
+#     plt.yticks(range(len(corr.columns)), corr.columns);
+#     return plt
+
+def get_png(fig):
+    png_output = BytesIO()
+    fig.savefig(png_output, format='png', transparent=True)
+    png_output.seek(0)
+    figdata_png = base64.b64encode(png_output.getvalue()).decode('ascii')
+    plt.clf()
+    return(figdata_png)
+
+@app.route("/api/data/<filename>")
+def data_view(filename):
+    check_token()
+    url = "./spotify_analysis/data/" + filename
+    print(url)
+    df = pd.read_pickle(url)
+    figures = []
+    for col in df.columns:
+        if(col != 'name'):
+            fig = df[col].astype(float).sort_values().plot(kind = 'box', legend=True, color='#025f67').get_figure()
+            figures.append(get_png(fig))
+            fig = df[col].astype(float).sort_values().plot(kind = 'hist', legend=True, color='#025f67').get_figure()
+            figures.append(get_png(fig))
+
+    # fig = plot_corr(df, size=11).gcf()
+    # figures.append(get_png(fig))
+    return jsonify({'figures': figures})
 
 def load_songs(url, limit):
     check_token()
@@ -107,17 +130,16 @@ def data_grab(playlist_url = None, name = "song_data"):
 @app.route("/api/learn/<name>")
 def data_learn(name = "song_data"):
     df = pd.read_pickle("./spotify_analysis/data/" + name + ".pkl")
-    #print("Splitting data")
+
     X_train, X_test, y_train, y_test = train_test_split(df.drop('name',axis=1), df['name'], test_size=0.30)
 
     param_grid = { 
-        'n_estimators': [200],
+        'n_estimators': [100, 200, 300],
         'max_features': [1.0, 0.5],
         'max_samples': ['auto', 0.5]
     }
 
     CV_clf = GridSearchCV(estimator=IsolationForest(), param_grid=param_grid, scoring="accuracy")
-    #print("Fitting data")
         
     CV_clf.fit(X_train, y_train)
     print(CV_clf.best_params_)
@@ -128,12 +150,8 @@ def data_learn(name = "song_data"):
     predictions = clf.predict(X_test)
 
     unmatch = [name for name, predict in zip(y_test, predictions) if predict < 0]
-    #print("Mismatched songs: \n", df.loc[df['name'].isin(unmatch)])
     
     count = len(unmatch)
-
-    #print("{}/{} misclassified: {:3f}%".format(count, len(y_test), (count/len(y_test)*100)))
-    #print(df.loc[df['name'].isin(unmatch)].describe())
     
     with open('clf.pkl', 'wb') as fid:
         pickle.dump(clf, fid, 2) 
@@ -148,14 +166,21 @@ def predict():
     if not params['url']:
         abort(404)
 
-    playlist_url = params['url'].replace("spotify:user:", "users/").replace(":playlist:", "/playlists/")
 
-    songs_api_endpoint = "{}/{}/tracks".format(SPOTIFY_API_URL, playlist_url)
-    songs = load_songs(songs_api_endpoint, 100)
+    playlist_url = params['url']
+    
+    if "spotify:user:" in playlist_url:
+        playlist_url = playlist_url.replace("spotify:user:", "users/").replace(":playlist:", "/playlists/")
 
-    df = pd.DataFrame(songs).drop(columns=['analysis_url', 'id', 'track_href', 'type', 'uri'])
-    # 'key', 'mode', 'time_signature'
-    df.dropna(inplace=True)
+        songs_api_endpoint = "{}/{}/tracks".format(SPOTIFY_API_URL, playlist_url)
+        songs = load_songs(songs_api_endpoint, 100)
+
+        df = pd.DataFrame(songs).drop(columns=['analysis_url', 'id', 'track_href', 'type', 'uri'])
+
+        df.dropna(inplace=True)
+    else:
+        pkl_file = open("./spotify_analysis/data/" + playlist_url + ".pkl", 'rb')
+        df = pickle.load(pkl_file)
     
     pkl_file = open('clf.pkl', 'rb')
     clf = pickle.load(pkl_file)
@@ -169,10 +194,4 @@ def predict():
     
     count = len(match)
 
-    #print("{}/{} misclassified: {:3f}%".format(count, len(y), (count/len(y)*100)))
-    #print("Matched: \n", df.loc[df['name'].isin(match)].describe())
-    #print("Unmatched: \n", df.loc[df['name'].isin(unmatch)].describe())    
     return jsonify({'Success': True, "Matched songs": json.loads(df.loc[df['name'].isin(match)].to_json(orient='index')), "Misclassified" : count ,"Misclassified %" : count/len(y)*100})
-
-if __name__ == "__main__":
-    app.run(debug=True, port=PORT, threaded=False)
