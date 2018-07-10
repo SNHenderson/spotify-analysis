@@ -127,11 +127,13 @@ a {
     filter: invert(100%);
 }
 
-.dark a {
+.dark a,
+.dark .btn-link {
     color: #9ECBFF;
 }
 
-.dark a:hover {
+.dark a:hover,
+.dark .btn-link:hover {
     color: #75B8FF;
 }
 
@@ -252,4 +254,9 @@ body.dark {
 
 .dark .page-link:hover {
     background-color: #252535 !important;
+}
+
+.setter {
+	padding: 0;
+	vertical-align: inherit;
 }

@@ -6,7 +6,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" integrity="sha384-WskhaSGFgHYWDcbwN70/dfYBj47jz9qbsMId/iRN3ewGhXQFZCSftd1LZCfmhktB" crossorigin="anonymous">
         <link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='styles/style.css') }}">
-        <script src="{{ url_for('static',filename='js/analyze.js') }}"></script>    
+        <script src="{{ url_for('static',filename='js/main.js') }}"></script>    
         <title>Spotify Authorization</title>
     </head>
     <body class="dark">
@@ -18,7 +18,7 @@
                 </svg>
             </a>
             
-            <select id="select" class="form-control col-md-2 my-2 my-lg-0" title="Select theme" onchange="changeTheme()">> 
+            <select id="select" class="form-control col-md-2 my-2 my-lg-0" title="Select theme"> 
                 <option id="theme-light" value="light">Light Theme</option>
                 <option id="theme-dark" selected value="dark">Dark Theme</option>
             </select>

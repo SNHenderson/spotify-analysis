@@ -16,18 +16,17 @@ const postData = (url = '', data = {}) => {
     .catch(error => console.error(`Fetch Error =\n`, error));
 };
 
-function changeTheme() {
-    var e = document.getElementById("select");
-    var theme = e.options[e.selectedIndex].value;
-    localStorage.setItem('theme', theme);
-    document.body.className = theme;
-}
-
 window.addEventListener("load", function() {
-    var theme = localStorage.getItem('theme');
-    if(theme) {
-        document.getElementById("select").value = theme;
-        document.body.className = theme;
+    var setters = document.querySelectorAll(".setter");
+    
+    for (var i = 0; i < setters.length; i++) {
+        (function () {
+            var set = setters[i];
+            set.addEventListener("click", function () {
+                var id = set.title;
+                document.getElementById(id).value = set.innerHTML;
+            });
+        }());
     }
 
     function load() {
@@ -64,7 +63,7 @@ window.addEventListener("load", function() {
         .then((response) => response.json()) 
         .then(function(data) {
             if(data['Success']) {
-                document.getElementById("status").innerHTML = "Trained model, test mismatched %: " + data["Test mismatched %"];
+                document.getElementById("status").innerHTML = "Trained model, test mismatched: " + data["Test mismatched %"].toFixed(2) + "%";
             } else {
                 document.getElementById("status").innerHTML = "Error training model";
                 console.error(data);
@@ -112,7 +111,7 @@ window.addEventListener("load", function() {
                 tbody.innerHTML += tr;
             }
             if(data['Success']) {
-                document.getElementById("status").innerHTML = "Songs classified under trained model: " + data["Misclassified"] + ", classified %:" + data["Misclassified %"];
+                document.getElementById("status").innerHTML = "Songs classified under trained model: " + data["Misclassified"] + ", " + data["Misclassified %"].toFixed(2) + "%";
             } else {
                 document.getElementById("status").innerHTML = "Error predicting";
                 console.error(data);
