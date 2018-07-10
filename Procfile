@@ -1,1 +1,1 @@
-web: gunicorn python:spotify_analysis --log-file=-
+web: gunicorn spotify_analysis:app --log-file=-
