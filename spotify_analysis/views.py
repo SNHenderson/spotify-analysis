@@ -131,7 +131,6 @@ def check_token():
 
 @app.route("/data/<filename>")
 def data_page(filename):
-    #data = data_view(filename + ".pkl").get_json()
     return render_template('output.html', name=filename)
 
 @app.route("/analysis")

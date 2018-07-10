@@ -8,7 +8,7 @@ window.addEventListener("load", function() {
             var figures = data["figures"];
             
             for (var i = 0; i < figures.length; i++) {
-                p.innerHTML += "<img class=\"invert\" src=\"data:image/png;base64," + figures[i] + "\">"
+                p.innerHTML += "<img class=\"img-fluid invert\" src=\"data:image/png;base64," + figures[i] + "\">"
             }
             document.getElementById("status").classList.add('d-none');
         }).catch(error => console.error(error));
