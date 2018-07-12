@@ -1,5 +1,5 @@
 import os, time, errno
-from flask import Flask, request, redirect, render_template, jsonify
+from flask import Flask, request, redirect, render_template, jsonify, g, make_response
 import requests
 from urllib.parse import quote
 import pandas as pd
@@ -19,6 +19,7 @@ SPOTIFY_API_BASE_URL = "https://api.spotify.com"
 API_VERSION = "v1"
 SPOTIFY_API_URL = "{}/{}".format(SPOTIFY_API_BASE_URL, API_VERSION)
 
+# Set directory name if running on flask or gunicorn
 dirname = os.getcwd().split('\\')[-1]
 url_prefix = "spotify_analysis/" if os.path.isdir("spotify_analysis") else ""
 
@@ -29,6 +30,7 @@ REDIRECT_URI = "{}/callback/q".format(CLIENT_SIDE_URL)
 # PORT = 8000
 # REDIRECT_URI = "{}:{}/callback/q".format(CLIENT_SIDE_URL, PORT)
 
+# Authorization Query Parameters
 SCOPE = "user-library-read playlist-read-private playlist-read-collaborative"
 STATE = ""
 SHOW_DIALOG_bool = True
@@ -43,16 +45,21 @@ auth_query_parameters = {
     "client_id": CLIENT_ID
 }
 
-AUTH_HEADER = ""
+def after_this_request(f):
+    if not hasattr(g, 'after_request_callbacks'):
+        g.after_request_callbacks = []
+    g.after_request_callbacks.append(f)
+    return f
+
+@app.after_request
+def call_after_request_callbacks(response):
+    for callback in getattr(g, 'after_request_callbacks', ()):
+        callback(response)
+    return response
 
 @app.route("/")
 def index():
-    try:
-        os.makedirs('./' + url_prefix + 'auth')
-    except OSError as e:
-        if e.errno != errno.EEXIST:
-            raise
-    # Auth Step 1: Authorization
+    """Sets the auth url then redirects"""
     url_args = "&".join(["{}={}".format(key, quote(val)) for key, val in auth_query_parameters.items()])
     auth_url = "{}/?{}".format(SPOTIFY_AUTH_URL, url_args)
     print(auth_url)
@@ -60,7 +67,8 @@ def index():
 
 @app.route("/callback/q")
 def callback():
-    # Auth Step 4: Requests refresh and access tokens
+    """Receives code, requests token and stores data"""
+
     auth_token = request.args['code']
     code_payload = {
         "grant_type": "authorization_code",
@@ -71,69 +79,66 @@ def callback():
     }
     post_request = requests.post(SPOTIFY_TOKEN_URL, data=code_payload)
 
-    # Auth Step 5: Tokens are Returned to Application
     response_data = post_request.json()
     if not 'access_token' in response_data:
-        return render_template("auth.html")
+        return redirect("/")
     access_token = response_data["access_token"]
     refresh_token = response_data["refresh_token"]
     token_type = response_data["token_type"]
-    expires_in = response_data["expires_in"]
-    expire = {'expires':time.time() + expires_in, 'refresh':refresh_token}
+    g.expires_in = response_data["expires_in"]
 
-    # Auth Step 6: Use the access token to access Spotify API
-    AUTH_HEADER = {"Authorization": "Bearer {}".format(access_token)}
+    g.AUTH_HEADER = {"Authorization": "Bearer {}".format(access_token)}
 
-    with open('./' + url_prefix + 'auth/header.pkl', 'wb') as fid:
-        pickle.dump(AUTH_HEADER, fid, 2) 
+    resp = make_response(render_template("auth.html"))
+    resp.set_cookie('token', value = access_token, max_age=g.expires_in, httponly=True)
+    resp.set_cookie('refresh', refresh_token, httponly=True)
+    return resp
 
-
-    with open('./' + url_prefix + 'auth/expire.pkl', 'wb') as fid:
-        pickle.dump(expire, fid, 2) 
-
-    return render_template("auth.html")
-
+@app.before_request
 def check_token():
-    pkl_file = open('./' + url_prefix + 'auth/expire.pkl', 'rb')
-    expire = pickle.load(pkl_file)
-    if time.time() < expire['expires']:
-        return
-
-    code_payload = {
-        "grant_type": "refresh_token",
-        "refresh_token": expire['refresh'],
-        'client_id': CLIENT_ID,
-        'client_secret': CLIENT_SECRET,
-    }
-    post_request = requests.post(SPOTIFY_TOKEN_URL, data=code_payload)
-    response_data = post_request.json()
-    access_token = response_data["access_token"]
     
-    if('refresh_token' in response_data):
-        refresh_token = response_data["refresh_token"]
-    else:
-        refresh_token = expire['refresh']
-    
-    if('expires_in' in response_data):
-        expires_in = response_data["expires_in"]
-    else:
-        expires_in = expire['expires']
-    
-    expire = {'expires':time.time() + expires_in, 'refresh':refresh_token}
+    """Checks and renews token if applicable"""
+    access_token = request.cookies.get('token')
 
-    AUTH_HEADER = {"Authorization": "Bearer {}".format(access_token)}
+    if access_token is None:
+        refresh_token = request.cookies.get('refresh')
 
-    with open('./' + url_prefix + 'auth/header.pkl', 'wb') as fid:
-        pickle.dump(AUTH_HEADER, fid, 2) 
+        code_payload = {
+            "grant_type": "refresh_token",
+            "refresh_token": refresh_token,
+            'client_id': CLIENT_ID,
+            'client_secret': CLIENT_SECRET,
+        }
 
-    with open('./' + url_prefix + 'auth/expire.pkl', 'wb') as fid:
-        pickle.dump(expire, fid, 2) 
+        post_request = requests.post(SPOTIFY_TOKEN_URL, data=code_payload)
+        response_data = post_request.json()
+        
+        if "access_token" not in response_data:
+            return
+        access_token = response_data["access_token"]
+
+        if('refresh_token' in response_data):
+            refresh_token = response_data["refresh_token"]
+        
+        if('expires_in' in response_data):
+            g.expires_in = response_data["expires_in"]
+
+        @after_this_request
+        def set_token(resp):
+            resp.set_cookie('token', access_token, max_age=g.expires_in, httponly=True)
+            resp.set_cookie('refresh', refresh_token, httponly=True)
 
 @app.route("/data/<filename>")
 def data_page(filename):
+    """Returns the data page
+    
+    Arguments:
+    filename -- the name of the file to view
+    """
     return render_template('output.html', name=filename)
 
 @app.route("/analysis")
 def analysis():
+    """Returns the page for interacting with the API"""
     data = [file[:-4] for file in os.listdir('./' + url_prefix + 'data')]
     return render_template('analyze.html', data=data)

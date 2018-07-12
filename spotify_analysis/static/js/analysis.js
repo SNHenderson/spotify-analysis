@@ -17,18 +17,6 @@ const postData = (url = '', data = {}) => {
 };
 
 window.addEventListener("load", function() {
-    var setters = document.querySelectorAll(".setter");
-    
-    for (var i = 0; i < setters.length; i++) {
-        (function () {
-            var set = setters[i];
-            set.addEventListener("click", function () {
-                var id = set.title;
-                document.getElementById(id).value = set.innerHTML;
-            });
-        }());
-    }
-
     function load() {
         var FD = new FormData(loadForm);
         var data = {};
@@ -43,7 +31,7 @@ window.addEventListener("load", function() {
 
         postData('/api/load/', data)
         .then(function(response) {
-            if(response['Success']) {
+            if(response['success']) {
                 document.getElementById("status").innerHTML = "Loaded data: <a href=\"/data/" + data['name'] + "\"> " + data['name'] + " </a>";
             } else {
                 document.getElementById("status").innerHTML = "Error loading data";
@@ -62,8 +50,8 @@ window.addEventListener("load", function() {
         fetch('/api/learn/' + FD.get('name'))
         .then((response) => response.json()) 
         .then(function(data) {
-            if(data['Success']) {
-                document.getElementById("status").innerHTML = "Trained model, test mismatched: " + data["Test mismatched %"].toFixed(2) + "%";
+            if(data['success']) {
+                document.getElementById("status").innerHTML = "Trained model, test mismatched: " + data["test_outliers_%"].toFixed(2) + "%";
             } else {
                 document.getElementById("status").innerHTML = "Error training model";
                 console.error(data);
@@ -80,16 +68,22 @@ window.addEventListener("load", function() {
             data[key] = value;
         });
 
+        document.getElementById("songs-table").classList.add('d-none');
         document.getElementById("status").innerHTML = "Loading songs and predicting..."
         var tbody = document.getElementById("tbody");
         tbody.innerHTML = "";
+
         postData('/api/predict/', data)
         .then(function(data) { 
-            var songs = data["Matched songs"];
+            if(tbody.innerHTML != "") {
+                tbody.innerHTML = "";
+            }
+            var songs = data["inliers"];
             
-            if(Object.keys(songs).length > 0) {
+            if(songs && Object.keys(songs).length > 0) {
                 document.getElementById("songs-table").classList.remove('d-none');
             }
+
             for (var i in songs) {
                 var tr = "<tr>";
                 tr += "<td>" + songs[i]["name"] + "</td>";
@@ -110,10 +104,11 @@ window.addEventListener("load", function() {
 
                 tbody.innerHTML += tr;
             }
-            if(data['Success']) {
-                document.getElementById("status").innerHTML = "Songs classified under trained model: " + data["Misclassified"] + ", " + data["Misclassified %"].toFixed(2) + "%";
+            songs = [];
+            if(data['success']) {
+                document.getElementById("status").innerHTML = "Songs classified under trained model: " + data["inliers_count"] + ", " + data["inliers_%"].toFixed(2) + "%";
             } else {
-                document.getElementById("status").innerHTML = "Error predicting";
+                document.getElementById("status").innerHTML = "Error predicting, make sure the model is trained";
                 console.error(data);
             }
         }) 
@@ -123,7 +118,6 @@ window.addEventListener("load", function() {
     var loadForm = document.getElementById("load");
     var learnForm = document.getElementById("learn");
     var predictForm = document.getElementById("predict");
-
 
     loadForm.addEventListener("submit", function(event) {
         event.preventDefault();
@@ -139,4 +133,16 @@ window.addEventListener("load", function() {
         event.preventDefault();
         predict();
     });
+
+    var setters = document.querySelectorAll(".setter");
+    
+    for (var i = 0; i < setters.length; i++) {
+        (function () {
+            var set = setters[i];
+            set.addEventListener("click", function () {
+                var id = set.title;
+                document.getElementById(id).value = set.innerHTML;
+            });
+        }());
+    }
 });
