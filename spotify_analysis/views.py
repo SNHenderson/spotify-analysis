@@ -24,7 +24,7 @@ dirname = os.getcwd().split('\\')[-1]
 url_prefix = "spotify_analysis/" if os.path.isdir("spotify_analysis") else ""
 
 # Server-side Parameters
-CLIENT_SIDE_URL = os.getenv('HEROKU_URL')
+CLIENT_SIDE_URL = os.getenv('URL')
 REDIRECT_URI = "{}/callback/q".format(CLIENT_SIDE_URL)
 # CLIENT_SIDE_URL = "http://127.0.0.1"
 # PORT = 8000
