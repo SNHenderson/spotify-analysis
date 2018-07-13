@@ -31,7 +31,7 @@ REDIRECT_URI = "{}/callback/q".format(CLIENT_SIDE_URL)
 # REDIRECT_URI = "{}:{}/callback/q".format(CLIENT_SIDE_URL, PORT)
 
 # Authorization Query Parameters
-SCOPE = "user-library-read playlist-read-private playlist-read-collaborative"
+SCOPE = "user-library-read playlist-read-private playlist-read-collaborative playlist-modify-private"
 STATE = ""
 SHOW_DIALOG_bool = True
 SHOW_DIALOG_str = str(SHOW_DIALOG_bool).lower()

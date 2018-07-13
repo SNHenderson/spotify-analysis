@@ -17,6 +17,12 @@ const postData = (url = '', data = {}) => {
 };
 
 window.addEventListener("load", function() {
+    function clearData() {
+        songs = [];
+        page = 0;
+        document.getElementById("results").classList.add('d-none');
+        document.getElementById("tbody").innerHTML = "";
+    }
     function load() {
         var FD = new FormData(loadForm);
         var data = {};
@@ -25,8 +31,7 @@ window.addEventListener("load", function() {
             data[key] = value;
         });
 
-        document.getElementById("songs-table").classList.add('d-none');
-        document.getElementById("tbody").innerHTML = "";
+        clearData();
         document.getElementById("status").innerHTML = "Loading songs..."
 
         postData('/api/load/', data)
@@ -43,8 +48,7 @@ window.addEventListener("load", function() {
     function learn() {
         var FD = new FormData(learnForm);
 
-        document.getElementById("songs-table").classList.add('d-none');
-        document.getElementById("tbody").innerHTML = "";
+        clearData();
         document.getElementById("status").innerHTML = "Training model..."
 
         fetch('/api/learn/' + FD.get('name'))
@@ -59,6 +63,103 @@ window.addEventListener("load", function() {
         }).catch(error => console.error(error));
     }
 
+    var songs = [];
+    var page = 0;
+    var show = 25;
+
+    function setHTMLandListeners() {
+        var pagination = document.getElementById("pagination");
+
+        pagination.innerHTML = "<li class=\"page-item disabled\" id=\"previous\"><a class=\"page-link bg-light\">Previous</a></li>"
+        var totalPages = songs.length / show;
+        var pageOffset = Math.max(0, page - 5);
+        for (var i = pageOffset; i < pageOffset + 10 && i < totalPages; i++) {
+            pagination.innerHTML += "<li id=\"page-" + i + "\" class=\"page-item\"><a class=\"page-link bg-light numeric\">" + (i+1) + "</a></li>"
+        }
+        pagination.innerHTML += "<li class=\"page-item\" id=\"next\"><a class=\"page-link bg-light\">Next</a></li>"
+
+        prevButton = document.getElementById("previous");
+        nextButton = document.getElementById("next");
+
+        prevButton.addEventListener("click", function(event) {
+            prev();
+        });
+
+        nextButton.addEventListener("click", function(event) {
+            next();
+        });
+
+        var numberLinks = document.querySelectorAll(".numeric");
+    
+        for (var i = 0; i < numberLinks.length; i++) {
+            (function () {
+                var link = numberLinks[i];
+                link.classList.remove('active');
+                link.addEventListener("click", function () {
+                    page = parseInt(link.text) - 1;
+                    populateSongs();
+                });
+            }());
+        }
+
+        document.getElementById("page-" + page).classList.add('active');
+    }
+
+    function populateSongs() {
+        setHTMLandListeners();
+
+        if (songs && songs.length > 0) {
+            tbody.innerHTML = "";
+            document.getElementById("results").classList.remove('d-none');
+            saveButton.classList.remove('d-none');
+            if(page * show + show >= songs.length) {
+                nextButton.classList.add('disabled');
+            } else {
+                nextButton.classList.remove('disabled');
+            }
+            if(page > 0) {
+                prevButton.classList.remove('disabled');
+            } else {
+                prevButton.classList.add('disabled');
+            }
+        }
+
+        for (var i = page * show; i < (page * show) + show && i < songs.length; i++) {
+            var tr = "<tr>";
+            tr += "<td>" + songs[i]["name"] + "</td>";
+            tr += "<td>" + songs[i]["acousticness"] + "</td>";
+            tr += "<td>" + songs[i]["danceability"] + "</td>";
+            tr += "<td>" + songs[i]["duration_ms"] + "</td>";
+            tr += "<td>" + songs[i]["energy"] + "</td>";
+            tr += "<td>" + songs[i]["instrumentalness"] + "</td>";
+            tr += "<td>" + songs[i]["key"] + "</td>";
+            tr += "<td>" + songs[i]["liveness"] + "</td>";
+            tr += "<td>" + songs[i]["loudness"] + "</td>";
+            tr += "<td>" + songs[i]["mode"] + "</td>";
+            tr += "<td>" + songs[i]["popularity"] + "</td>";
+            tr += "<td>" + songs[i]["speechiness"] + "</td>";
+            tr += "<td>" + songs[i]["tempo"] + "</td>";
+            tr += "<td>" + songs[i]["time_signature"] + "</td>";
+            tr += "<td>" + songs[i]["valence"] + "</td>";
+
+            tbody.innerHTML += tr;
+        }
+    }
+
+    function next() {
+        if(page * show + show < songs.length) {
+            page += 1;
+            populateSongs();
+        }
+    }
+
+    function prev() {
+        if(page > 0) {
+            page -= 1;
+            populateSongs();
+        }
+    }
+
     function predict() {
         var FD = new FormData(predictForm);
 
@@ -68,43 +169,18 @@ window.addEventListener("load", function() {
             data[key] = value;
         });
 
-        document.getElementById("songs-table").classList.add('d-none');
+        clearData();
         document.getElementById("status").innerHTML = "Loading songs and predicting..."
         var tbody = document.getElementById("tbody");
         tbody.innerHTML = "";
 
         postData('/api/predict/', data)
         .then(function(data) { 
-            if(tbody.innerHTML != "") {
-                tbody.innerHTML = "";
-            }
-            var songs = data["inliers"];
+            tbody.innerHTML = "";
+            songs = Object.values(data["inliers"]);
+
+            populateSongs();
             
-            if(songs && Object.keys(songs).length > 0) {
-                document.getElementById("songs-table").classList.remove('d-none');
-            }
-
-            for (var i in songs) {
-                var tr = "<tr>";
-                tr += "<td>" + songs[i]["name"] + "</td>";
-                tr += "<td>" + songs[i]["acousticness"] + "</td>";
-                tr += "<td>" + songs[i]["danceability"] + "</td>";
-                tr += "<td>" + songs[i]["duration_ms"] + "</td>";
-                tr += "<td>" + songs[i]["energy"] + "</td>";
-                tr += "<td>" + songs[i]["instrumentalness"] + "</td>";
-                tr += "<td>" + songs[i]["key"] + "</td>";
-                tr += "<td>" + songs[i]["liveness"] + "</td>";
-                tr += "<td>" + songs[i]["loudness"] + "</td>";
-                tr += "<td>" + songs[i]["mode"] + "</td>";
-                tr += "<td>" + songs[i]["popularity"] + "</td>";
-                tr += "<td>" + songs[i]["speechiness"] + "</td>";
-                tr += "<td>" + songs[i]["tempo"] + "</td>";
-                tr += "<td>" + songs[i]["time_signature"] + "</td>";
-                tr += "<td>" + songs[i]["valence"] + "</td>";
-
-                tbody.innerHTML += tr;
-            }
-            songs = [];
             if(data['success']) {
                 document.getElementById("status").innerHTML = "Songs classified under trained model: " + data["inliers_count"] + ", " + data["inliers_%"].toFixed(2) + "%";
             } else {
@@ -115,9 +191,35 @@ window.addEventListener("load", function() {
         .catch(error => console.error(error));
     }
 
+    function save() {
+        var FD = new FormData(predictForm);
+
+        document.getElementById("status").innerHTML = "Saving playlist..."
+        saveButton.classList.add('d-none');
+
+        var data = {};
+       
+        FD.forEach(function(value, key){
+            data[key] = value;
+        });
+
+        postData('/api/save/', data)
+        .then(function(data) {
+            if(data['success']) {
+                document.getElementById("status").innerHTML = "Saved playlist";
+            } else {
+                document.getElementById("status").innerHTML = "Error saving playlist";
+                console.error(data);
+            }
+        }).catch(error => console.error(error));
+    }
+
     var loadForm = document.getElementById("load");
     var learnForm = document.getElementById("learn");
     var predictForm = document.getElementById("predict");
+    var saveButton = document.getElementById("save");
+    var prevButton;
+    var nextButton;
 
     loadForm.addEventListener("submit", function(event) {
         event.preventDefault();
@@ -134,6 +236,10 @@ window.addEventListener("load", function() {
         predict();
     });
 
+    saveButton.addEventListener("click", function(event) {
+        save();
+    });
+    
     var setters = document.querySelectorAll(".setter");
     
     for (var i = 0; i < setters.length; i++) {

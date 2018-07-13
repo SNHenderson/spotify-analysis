@@ -88,32 +88,40 @@
             </div>
             <div class="row p-sm-3">
                 <p class="lead" id="status">  </p>
-                <table class="table table-bordered d-none" id="songs-table">
-                    <thead class="thead-light">
-                        <tr>
-                            <th> Name </th>
-                            <th> Acousticness </th>
-                            <th> Danceability </th>
-                            <th> Duration (ms) </th>
-                            <th> Energy </th>
-                            <th> Instrumentalness </th>
-                            <th> Key </th>
-                            <th> Liveness </th>
-                            <th> Loudness </th>
-                            <th> Mode </th>
-                            <th> Popularity </th>
-                            <th> Speechiness </th>
-                            <th> Tempo </th>
-                            <th> Time signature </th>
-                            <th> Valence </th>
-                        </tr>
-                    </thead>
-                    <tbody id="tbody">
-                    </tbody>
-                </table>
+                <div class="d-none" id="results">
+                    <button type="button" value="Save" class="btn btn-primary mb-2 d-none" id="save"> Save playlist </button>
+                    <nav aria-label="Songs navigation">
+                        <ul class="pagination" id="pagination">
+                            <!-- <li class="page-item disabled" id="previous"><a class="page-link bg-light">Previous</a></li>
+                            <span id="pages"></span>
+                            <li class="page-item" id="next"><a class="page-link bg-light">Next</a></li> -->
+                        </ul>
+                    </nav>
+                    <table class="table table-bordered" id=songs-table">
+                        <thead class="thead-light">
+                            <tr>
+                                <th> Name </th>
+                                <th> Acousticness </th>
+                                <th> Danceability </th>
+                                <th> Duration (ms) </th>
+                                <th> Energy </th>
+                                <th> Instrumentalness </th>
+                                <th> Key </th>
+                                <th> Liveness </th>
+                                <th> Loudness </th>
+                                <th> Mode </th>
+                                <th> Popularity </th>
+                                <th> Speechiness </th>
+                                <th> Tempo </th>
+                                <th> Time signature </th>
+                                <th> Valence </th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody">
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
-
-        <!-- <script src="{{ url_for('static',filename='js/analyze.js') }}"></script>     -->
     </body>
 </html>

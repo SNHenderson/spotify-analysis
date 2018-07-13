@@ -1,4 +1,4 @@
-import os, base64
+import os, base64, math
 from io import BytesIO
 from flask import Flask, request, redirect, render_template, jsonify, abort, g
 import requests
@@ -62,7 +62,7 @@ def data_view(filename):
     """
     # check_token()
     url = "./" + url_prefix + "data/" + filename
-    df = pd.read_pickle(url)
+    df = pd.read_pickle(url).drop(columns=['analysis_url', 'id', 'track_href', 'type', 'uri'])
     figures = []
     for col in df.columns:
         if(col != 'name'):
@@ -97,7 +97,7 @@ def load_songs(url, limit = 100):
         try:
             songs_data = songs_response.json()
         except Exception as e:
-            return songs_response
+            return (songs_response.content, songs_response.status_code, songs_response.headers.items())
         
         # Query API for audio features
         if songs_data and "items" in songs_data and len(songs_data["items"]) >= 1:
@@ -144,7 +144,7 @@ def data_grab(playlist_url = None, name = "song_data"):
     # Load songs and drop columns that contain unique and unused information 
     songs = load_songs(songs_api_endpoint, limit)
     if len(songs) > 0:
-        df = pd.DataFrame(songs).drop(columns=['analysis_url', 'id', 'track_href', 'type', 'uri'])
+        df = pd.DataFrame(songs)#.drop(columns=['analysis_url', 'id', 'track_href', 'type', 'uri'])
     else:
         return jsonify({'success': False, "url" : None})
     
@@ -164,7 +164,7 @@ def data_learn(name = "song_data"):
     name -- the name of file to get the data from, default song_data
     """
     # load data
-    df = pd.read_pickle("./" + url_prefix + "data/" + name + ".pkl")
+    df = pd.read_pickle("./" + url_prefix + "data/" + name + ".pkl").drop(columns=['analysis_url', 'id', 'track_href', 'type', 'uri'])
 
     # split data into train and test sets
     X_train, X_test, y_train, y_test = train_test_split(df.drop('name',axis=1), df['name'], test_size=0.30)
@@ -206,10 +206,9 @@ def predict(url = "song_data"):
     else:
         # Load songs from saved data
         try:
-            pkl_file = open("./" + url_prefix + "data/" + url + ".pkl", 'rb')
+            df = pd.read_pickle("./" + url_prefix + "data/" + url + ".pkl")
         except Exception as e:
             return jsonify({'success': False})    
-        df = pickle.load(pkl_file)
     
     # Open model and predict
     try:
@@ -218,10 +217,70 @@ def predict(url = "song_data"):
         return jsonify({'success': False})
     
     clf = pickle.load(pkl_file)
-    predictions = clf.predict(df.drop('name', axis=1))
+    predictions = clf.predict(df.drop(columns=['name', 'analysis_url', 'id', 'track_href', 'type', 'uri']))
     y = df['name']
     inliers = [name for name, predict in zip(y, predictions) if predict > 0]
     outliers = [name for name, predict in zip(y, predictions) if predict < 0]
     count = len(inliers)
 
+    with open("./" + url_prefix + "model/" + url  +  "_inliers.pkl", 'wb') as fid:
+        pickle.dump(df.loc[df['name'].isin(inliers)], fid, 2)
+
     return jsonify({'success': True, "inliers": json.loads(df.loc[df['name'].isin(inliers)].to_json(orient='index')), "inliers_count" : count ,"inliers_%" : count/len(y)*100})
+
+@app.route("/api/save/", methods=['POST'])
+def save(name = "song_data"):
+    """POST endpoint for saving playlist
+
+    Arguments:
+    name -- the name of the playlist to save the inliers of 
+    """
+    access_token = request.cookies.get('token')
+    headers = {"Authorization": "Bearer {}".format(access_token), "Content-Type" : "application/json"}
+
+    if not request.get_json():
+        abort(400)
+
+    params = request.get_json()
+    name = params['url']
+    
+    # Load songs from saved data
+    try:
+        df = pd.read_pickle("./" + url_prefix + "model/" + name + "_inliers.pkl")
+    except Exception as e:
+        return jsonify({'success': False}, {'error': repr(e)})    
+
+    # Convert data to list of lists with a max length of 100 (Spotify's limit)
+    uris = []
+    length = math.ceil(df.shape[0] / 100)
+    for i in range(length):
+        uris.append(df[100*i:(100 * i) + 100]['uri'])
+    
+    # Get current user's ID
+    user_api_endpoint = "{}/me".format(SPOTIFY_API_URL)
+    user_response = requests.get(user_api_endpoint, headers=headers)
+    user_data = user_response.json()
+    user_id = user_data['id']
+
+    # Create the playlist
+    playlist_api_endpoint = "{}/users/{}/playlists".format(SPOTIFY_API_URL, user_id)
+
+    data = {'name': name.title() + " Inliers", 'public': False}
+    playlist_response = requests.post(playlist_api_endpoint, headers=headers, data=json.dumps(data))
+    try:
+        playlist_data = playlist_response.json()
+        playlist_id = playlist_data['id']
+    except Exception as e:
+        return (playlist_response.content, playlist_response.status_code, playlist_response.headers.items())
+    
+    # Save songs to the playlist
+    playlist_api_endpoint = playlist_api_endpoint + "/{}/tracks".format(playlist_id)
+    
+    for uri in uris:
+        data = {'uris': uri.tolist()}
+        playlist_response = requests.post(playlist_api_endpoint, headers=headers, data=json.dumps(data))
+        if playlist_response.status_code != 201:
+            return (playlist_response.content, playlist_response.status_code, playlist_response.headers.items())
+
+
+    return jsonify({'success': True})

@@ -256,6 +256,25 @@ body.dark {
     background-color: #252535 !important;
 }
 
+.dark .page-item.active .page-link {
+    color: #fff !important;
+    background-color: #375a7f !important;
+    border-color: #375a7f !important;
+}
+
+.dark .page-item.active .page-link:hover {
+    color: #fff !important;
+    background-color: #375a7f !important;
+    border-color: #375a7f !important;
+}
+
+.page-item.active .page-link {
+    z-index: 1;
+    color: #fff;
+    background-color: #007bff!important;
+    border-color: #007bff;
+}
+
 .setter {
 	padding: 0;
 	vertical-align: inherit;
