@@ -49,7 +49,7 @@ This project has setuptools, but it is not necessary to use for running. Navigat
 
 #### Linux/Mac/Bash:
 
-`gunicorn spotify_analysis:app --log-file=-`
+`gunicorn spotify_analysis:app -t 300 --log-file=-`
 
 #### Windows:
 
