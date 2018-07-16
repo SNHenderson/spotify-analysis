@@ -108,7 +108,7 @@ window.addEventListener("load", function() {
     function populateSongs() {
         if (songs && songs.length > 0) {
             setHTMLandListeners();
-            
+
             tbody.innerHTML = "";
             document.getElementById("results").classList.remove('d-none');
             saveButton.classList.remove('d-none');
@@ -129,17 +129,17 @@ window.addEventListener("load", function() {
             tr += "<td>" + songs[i]["name"] + "</td>";
             tr += "<td>" + songs[i]["acousticness"] + "</td>";
             tr += "<td>" + songs[i]["danceability"] + "</td>";
-            tr += "<td>" + songs[i]["duration_ms"] + "</td>";
+            // tr += "<td>" + songs[i]["duration_ms"] + "</td>";
             tr += "<td>" + songs[i]["energy"] + "</td>";
             tr += "<td>" + songs[i]["instrumentalness"] + "</td>";
-            tr += "<td>" + songs[i]["key"] + "</td>";
+            // tr += "<td>" + songs[i]["key"] + "</td>";
             tr += "<td>" + songs[i]["liveness"] + "</td>";
             tr += "<td>" + songs[i]["loudness"] + "</td>";
-            tr += "<td>" + songs[i]["mode"] + "</td>";
+            // tr += "<td>" + songs[i]["mode"] + "</td>";
             tr += "<td>" + songs[i]["popularity"] + "</td>";
             tr += "<td>" + songs[i]["speechiness"] + "</td>";
             tr += "<td>" + songs[i]["tempo"] + "</td>";
-            tr += "<td>" + songs[i]["time_signature"] + "</td>";
+            // tr += "<td>" + songs[i]["time_signature"] + "</td>";
             tr += "<td>" + songs[i]["valence"] + "</td>";
 
             tbody.innerHTML += tr;
@@ -177,9 +177,10 @@ window.addEventListener("load", function() {
         postData('/api/predict/', data)
         .then(function(data) { 
             tbody.innerHTML = "";
-            songs = Object.values(data["inliers"]);
-
-            populateSongs();
+            if(data['inliers']) {
+                songs = Object.values(data["inliers"]);
+                populateSongs();
+            }
             
             if(data['success']) {
                 document.getElementById("status").innerHTML = "Songs classified under trained model: " + data["inliers_count"] + ", " + data["inliers_%"].toFixed(2) + "%";

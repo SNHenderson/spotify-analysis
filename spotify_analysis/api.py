@@ -66,7 +66,8 @@ def data_view(filename):
     """
     url = "./" + url_prefix + "data/" + filename
     df = pd.read_pickle(url).drop(columns=['name','analysis_url', 'id', 'track_href', 'type', 'uri'])
-
+    df = df.drop(columns = ['duration_ms', 'key', 'mode', 'time_signature'])
+    
     figures = []
     for col in df.columns:
         fig = df[col].astype(float).sort_values().plot(kind = 'box', legend=True, color='#5f0000').get_figure()
@@ -169,13 +170,16 @@ def data_learn(name = "song_data"):
     # load data
     df = pd.read_pickle("./" + url_prefix + "data/" + name + ".pkl").drop(columns=['analysis_url', 'id', 'track_href', 'type', 'uri'])
 
+    # drop "useless" columns
+    df = df.drop(columns = ['duration_ms', 'key', 'mode', 'time_signature'])
+
     # split data into train and test sets
     X_train, X_test, y_train, y_test = train_test_split(df.drop('name',axis=1), df['name'], test_size=0.30)
 
     # fit estimator
     #clf = IsolationForest(n_estimators = 500, contamination = 0.11)
     
-    clf = make_pipeline(StandardScaler(), OneClassSVM(nu = 0.15))
+    clf = make_pipeline(StandardScaler(), OneClassSVM(nu = 0.11, gamma=0.04))
     clf.fit(X_train, y_train)
 
     # Predict off test data and create array of outliers 
@@ -222,6 +226,7 @@ def predict(url = "song_data"):
         return jsonify({'success': False})
     
     clf = pickle.load(pkl_file)
+    df = df.drop(columns = ['duration_ms', 'key', 'mode', 'time_signature'])
     predictions = clf.predict(df.drop(columns=['name', 'analysis_url', 'id', 'track_href', 'type', 'uri']))
     y = df['name']
     inliers = [name for name, predict in zip(y, predictions) if predict > 0]
