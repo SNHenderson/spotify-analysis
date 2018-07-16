@@ -106,9 +106,9 @@ window.addEventListener("load", function() {
     }
 
     function populateSongs() {
-        setHTMLandListeners();
-
         if (songs && songs.length > 0) {
+            setHTMLandListeners();
+            
             tbody.innerHTML = "";
             document.getElementById("results").classList.remove('d-none');
             saveButton.classList.remove('d-none');

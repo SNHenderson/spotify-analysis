@@ -4,12 +4,16 @@ from flask import Flask, request, redirect, render_template, jsonify, abort, g
 import requests
 from urllib.parse import quote
 import pandas as pd
+from pandas.plotting import scatter_matrix
 import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
 import pickle
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import IsolationForest
+from sklearn.svm import OneClassSVM
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import make_pipeline
 import numpy as np
 import json
 
@@ -60,16 +64,15 @@ def data_view(filename):
     Arguments:
     filename -- the file to get the data from
     """
-    # check_token()
     url = "./" + url_prefix + "data/" + filename
-    df = pd.read_pickle(url).drop(columns=['analysis_url', 'id', 'track_href', 'type', 'uri'])
+    df = pd.read_pickle(url).drop(columns=['name','analysis_url', 'id', 'track_href', 'type', 'uri'])
+
     figures = []
     for col in df.columns:
-        if(col != 'name'):
-            fig = df[col].astype(float).sort_values().plot(kind = 'box', legend=True, color='#025f67').get_figure()
-            figures.append(get_png(fig))
-            fig = df[col].astype(float).sort_values().plot(kind = 'hist', legend=True, color='#025f67').get_figure()
-            figures.append(get_png(fig))
+        fig = df[col].astype(float).sort_values().plot(kind = 'box', legend=True, color='#5f0000').get_figure()
+        figures.append(get_png(fig))
+        fig = df[col].astype(float).sort_values().plot(kind = 'hist', legend=True, color='#5f0000').get_figure()
+        figures.append(get_png(fig))
 
     # fig = plot_corr(df, size=11).gcf()
     # figures.append(get_png(fig))
@@ -169,8 +172,10 @@ def data_learn(name = "song_data"):
     # split data into train and test sets
     X_train, X_test, y_train, y_test = train_test_split(df.drop('name',axis=1), df['name'], test_size=0.30)
 
-    # fit IsolationForest
-    clf = IsolationForest(n_estimators = 500, contamination = 0.11)
+    # fit estimator
+    #clf = IsolationForest(n_estimators = 500, contamination = 0.11)
+    
+    clf = make_pipeline(StandardScaler(), OneClassSVM(nu = 0.15))
     clf.fit(X_train, y_train)
 
     # Predict off test data and create array of outliers 
