@@ -37,7 +37,13 @@ window.addEventListener("load", function() {
         postData('/api/load/', data)
         .then(function(response) {
             if(response['success']) {
-                document.getElementById("status").innerHTML = "Loaded data: <a href=\"/data/" + data['name'] + "\"> " + data['name'] + " </a>";
+                document.getElementById("status").innerHTML = "Loaded data";
+                var song = data['name'];
+                if(!document.getElementById("train-data-" + song)) {
+                    document.getElementById("train-data-options").innerHTML += ", <button type=\"button\" class=\"setter btn btn-link\" title=\"train-data\" id=\"train-data-" + song + "\">" + song + "</button><a href=\"/data/" + song + "\" class=\"icon\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"-3 -5 20 20\"><path fill-rule=\"evenodd\" d=\"M16 14v1H0V0h1v14h15zM5 13H3V8h2v5zm4 0H7V3h2v10zm4 0h-2V6h2v7z\"/></svg></a>";
+                    document.getElementById("predict-data-options").innerHTML += ", <button type=\"button\" class=\"setter btn btn-link\" title=\"predict-data\">" + song + "</button>";
+                    linkSetters();
+                }
             } else {
                 document.getElementById("status").innerHTML = "Error loading data";
                 console.error(response);
@@ -68,50 +74,49 @@ window.addEventListener("load", function() {
     var show = 25;
 
     function setHTMLandListeners() {
+        var totalPages = songs.length / show;
+       
         var pagination = document.getElementById("pagination");
 
-        pagination.innerHTML = "<li class=\"page-item disabled\" id=\"previous\"><a class=\"page-link bg-light\">Previous</a></li>"
-        var totalPages = songs.length / show;
-        var pageOffset = Math.max(0, page - 5);
-        for (var i = pageOffset; i < pageOffset + 10 && i < totalPages; i++) {
-            pagination.innerHTML += "<li id=\"page-" + i + "\" class=\"page-item\"><a class=\"page-link bg-light numeric\">" + (i+1) + "</a></li>"
-        }
-        pagination.innerHTML += "<li class=\"page-item\" id=\"next\"><a class=\"page-link bg-light\">Next</a></li>"
+        if(totalPages > 1) {
+            pagination.innerHTML = "<li class=\"page-item disabled\" id=\"previous\"><a class=\"page-link bg-light\">Previous</a></li>"
+       
+            if( totalPages > 10) {
+                var pageOffset = Math.max(0, page - 5);
+            } else {
+                var pageOffset = 0;
+            }
+            for (var i = pageOffset; i < pageOffset + 10 && i < totalPages; i++) {
+                pagination.innerHTML += "<li id=\"page-" + i + "\" class=\"page-item\"><a class=\"page-link bg-light numeric\">" + (i+1) + "</a></li>"
+            }
+            pagination.innerHTML += "<li class=\"page-item\" id=\"next\"><a class=\"page-link bg-light\">Next</a></li>"
 
-        prevButton = document.getElementById("previous");
-        nextButton = document.getElementById("next");
+            prevButton = document.getElementById("previous");
+            nextButton = document.getElementById("next");
 
-        prevButton.addEventListener("click", function(event) {
-            prev();
-        });
+            prevButton.addEventListener("click", function(event) {
+                prev();
+            });
 
-        nextButton.addEventListener("click", function(event) {
-            next();
-        });
+            nextButton.addEventListener("click", function(event) {
+                next();
+            });
 
-        var numberLinks = document.querySelectorAll(".numeric");
-    
-        for (var i = 0; i < numberLinks.length; i++) {
-            (function () {
-                var link = numberLinks[i];
-                link.classList.remove('active');
-                link.addEventListener("click", function () {
-                    page = parseInt(link.text) - 1;
-                    populateSongs();
-                });
-            }());
-        }
+            var numberLinks = document.querySelectorAll(".numeric");
+        
+            for (var i = 0; i < numberLinks.length; i++) {
+                (function () {
+                    var link = numberLinks[i];
+                    link.classList.remove('active');
+                    link.addEventListener("click", function () {
+                        page = parseInt(link.text) - 1;
+                        populateSongs();
+                    });
+                }());
+            }
 
-        document.getElementById("page-" + page).classList.add('active');
-    }
+            document.getElementById("page-" + page).classList.add('active');
 
-    function populateSongs() {
-        if (songs && songs.length > 0) {
-            setHTMLandListeners();
-
-            tbody.innerHTML = "";
-            document.getElementById("results").classList.remove('d-none');
-            saveButton.classList.remove('d-none');
             if(page * show + show >= songs.length) {
                 nextButton.classList.add('disabled');
             } else {
@@ -122,6 +127,17 @@ window.addEventListener("load", function() {
             } else {
                 prevButton.classList.add('disabled');
             }
+        } else {
+            pagination.innerHTML = "";
+        }
+    }
+
+    function populateSongs() {
+        if (songs && songs.length > 0) {
+            setHTMLandListeners();
+
+            tbody.innerHTML = "";
+            document.getElementById("results").classList.remove('d-none');
         }
 
         for (var i = page * show; i < (page * show) + show && i < songs.length; i++) {
@@ -177,6 +193,7 @@ window.addEventListener("load", function() {
         postData('/api/predict/', data)
         .then(function(data) { 
             tbody.innerHTML = "";
+            saveButton.classList.remove('d-none');
             if(data['inliers']) {
                 songs = Object.values(data["inliers"]);
                 populateSongs();
@@ -240,16 +257,20 @@ window.addEventListener("load", function() {
     saveButton.addEventListener("click", function(event) {
         save();
     });
-    
-    var setters = document.querySelectorAll(".setter");
-    
-    for (var i = 0; i < setters.length; i++) {
-        (function () {
-            var set = setters[i];
-            set.addEventListener("click", function () {
-                var id = set.title;
-                document.getElementById(id).value = set.innerHTML;
-            });
-        }());
+
+    function linkSetters() {
+        var setters = document.querySelectorAll(".setter");
+        
+        for (var i = 0; i < setters.length; i++) {
+            (function () {
+                var set = setters[i];
+                set.addEventListener("click", function () {
+                    var id = set.title;
+                    document.getElementById(id).value = set.innerHTML;
+                });
+            }());
+        }
     }
+    
+    linkSetters();
 });

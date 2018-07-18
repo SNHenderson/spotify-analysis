@@ -168,13 +168,13 @@ def data_learn(name = "song_data"):
     name -- the name of file to get the data from, default song_data
     """
     # load data
-    df = pd.read_pickle("./" + url_prefix + "data/" + name + ".pkl").drop(columns=['analysis_url', 'id', 'track_href', 'type', 'uri'])
+    df = pd.read_pickle("./" + url_prefix + "data/" + name + ".pkl").drop(columns=['analysis_url', 'track_href', 'type', 'uri'])
 
     # drop "useless" columns
     df = df.drop(columns = ['duration_ms', 'key', 'mode', 'time_signature'])
 
     # split data into train and test sets
-    X_train, X_test, y_train, y_test = train_test_split(df.drop('name',axis=1), df['name'], test_size=0.30)
+    X_train, X_test, y_train, y_test = train_test_split(df.drop(columns=['name', 'id']), df['id'], test_size=0.30)
 
     # fit estimator
     #clf = IsolationForest(n_estimators = 500, contamination = 0.11)
@@ -184,13 +184,13 @@ def data_learn(name = "song_data"):
 
     # Predict off test data and create array of outliers 
     predictions = clf.predict(X_test)
-    outliers = [name for name, predict in zip(y_test, predictions) if predict < 0]
+    outliers = [id for id, predict in zip(y_test, predictions) if predict < 0]
     count = len(outliers)
     
     with open("./" + url_prefix + "model/" + "clf.pkl", 'wb') as fid:
         pickle.dump(clf, fid, 2) 
 
-    return jsonify({'success': True, "test_outliers": json.loads(df.loc[df['name'].isin(outliers)].to_json(orient='index')), "test_outliers_count": count, "test_outliers_%": count/len(y_test)*100})
+    return jsonify({'success': True, "test_outliers": json.loads(df.loc[df['id'].isin(outliers)].to_json(orient='index')), "test_outliers_count": count, "test_outliers_%": count/len(y_test)*100})
 
 @app.route("/api/predict/", methods=['POST'])
 def predict(url = "song_data"):
@@ -210,8 +210,9 @@ def predict(url = "song_data"):
         url = url.replace("spotify:user:", "users/").replace(":playlist:", "/playlists/")
         songs_api_endpoint = "{}/{}/tracks".format(SPOTIFY_API_URL, url)
         songs = load_songs(songs_api_endpoint, 100)
-        df = pd.DataFrame(songs).drop(columns=['analysis_url', 'id', 'track_href', 'type', 'uri'])
+        df = pd.DataFrame(songs)
         df.dropna(inplace=True)
+        url = url.replace("users/", "").replace("/playlists/", "_")
     else:
         # Load songs from saved data
         try:
@@ -228,15 +229,15 @@ def predict(url = "song_data"):
     clf = pickle.load(pkl_file)
     df = df.drop(columns = ['duration_ms', 'key', 'mode', 'time_signature'])
     predictions = clf.predict(df.drop(columns=['name', 'analysis_url', 'id', 'track_href', 'type', 'uri']))
-    y = df['name']
-    inliers = [name for name, predict in zip(y, predictions) if predict > 0]
-    outliers = [name for name, predict in zip(y, predictions) if predict < 0]
+    y = df['id']
+    inliers = [id for id, predict in zip(y, predictions) if predict > 0]
+    outliers = [id for id, predict in zip(y, predictions) if predict < 0]
     count = len(inliers)
 
-    with open("./" + url_prefix + "model/" + url  +  "_inliers.pkl", 'wb') as fid:
-        pickle.dump(df.loc[df['name'].isin(inliers)], fid, 2)
+    with open("./" + url_prefix + "model/inliers.pkl", 'wb') as fid:
+        pickle.dump(df.loc[df['id'].isin(inliers)], fid, 2)
 
-    return jsonify({'success': True, "inliers": json.loads(df.loc[df['name'].isin(inliers)].to_json(orient='index')), "inliers_count" : count ,"inliers_%" : count/len(y)*100})
+    return jsonify({'success': True, "inliers": json.loads(df.loc[df['id'].isin(inliers)].to_json(orient='index')), "inliers_count" : count ,"inliers_%" : count/len(y)*100})
 
 @app.route("/api/save/", methods=['POST'])
 def save(name = "song_data"):
@@ -253,10 +254,13 @@ def save(name = "song_data"):
 
     params = request.get_json()
     name = params['url']
+
+    if "spotify:user:" in name:
+        name = name.replace("spotify:user:", "").replace(":playlist:", "_")
     
     # Load songs from saved data
     try:
-        df = pd.read_pickle("./" + url_prefix + "model/" + name + "_inliers.pkl")
+        df = pd.read_pickle("./" + url_prefix + "model/inliers.pkl")
     except Exception as e:
         return jsonify({'success': False}, {'error': repr(e)})    
 
