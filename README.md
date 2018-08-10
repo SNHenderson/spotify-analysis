@@ -1,5 +1,5 @@
 # spotify-analysis
-Analyzing spotify data with computers. This project is an attempt to use outlier detection to classify music, based off of [Spotify's public API.](https://developer.spotify.com/documentation/web-api/) This is done with SKLearn's IsolationForest. 
+Analyzing spotify data with computers. This project is an attempt to use outlier detection to classify music, based off of [Spotify's public API.](https://developer.spotify.com/documentation/web-api/) This is done with SKLearn's OneClassSVM. 
 
 ## Using hosted version:
 
@@ -73,4 +73,4 @@ This project has setuptools, but it is not necessary to use for running. Navigat
 
 **Matplotlib:** Creates plots of data (*/data/:dataname*)
 
-**SKLearn:** IsolationForest Algorithm, used for classifying songs
+**SKLearn:** OneClassSVM Algorithm, used for classifying songs
