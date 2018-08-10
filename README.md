@@ -7,7 +7,7 @@ Analyzing spotify data with computers. This project is an attempt to use outlier
 
 Navigate to https://spotify-data.herokuapp.com/
 
-Login to Spotify and give the client permissions. You will recieve a token. 
+Login to Spotify and give the client permissions. You will receive a token. 
 
 On the analysis page, you can load and save more data sets from Spotify, train a model off existing data sets, or predict from a data set based on the model 
 
